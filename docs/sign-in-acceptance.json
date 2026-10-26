@@ -1,0 +1,19 @@
+{
+  "milestone": "M3",
+  "checks": [
+    "admin-only one-time setup",
+    "real HTTP cookie persistence",
+    "reload and new tab",
+    "separate browser sign-in",
+    "service restart retention",
+    "server-side logout revocation",
+    "other browser retained",
+    "old/copied cookie denied",
+    "setup cannot replace password",
+    "hashed credentials and session tokens",
+    "mode 0600"
+  ],
+  "result": "passed",
+  "audio_changes": "none",
+  "user_credentials_used": false
+}

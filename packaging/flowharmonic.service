@@ -1,0 +1,34 @@
+[Unit]
+Description=FlowHarmonic
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=flowharmonic
+Group=flowharmonic
+WorkingDirectory=/opt/flowharmonic/current
+ExecStart=/opt/flowharmonic/current/.venv/bin/python -m flowharmonic
+Environment=FLOWHARMONIC_CONFIG=/etc/flowharmonic/config.toml
+Environment=FLOWHARMONIC_DATA_DIR=/var/lib/flowharmonic
+Environment=PYTHONDONTWRITEBYTECODE=1
+StateDirectory=flowharmonic
+StateDirectoryMode=0750
+UMask=0027
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/flowharmonic
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+[Install]
+WantedBy=multi-user.target

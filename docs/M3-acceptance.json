@@ -1,0 +1,60 @@
+{
+  "milestone": "M3",
+  "guest": "Ubuntu 22.04.5 x86_64",
+  "audio": "QEMU HDA Intel / ALSA / distribution Snapcast 0.25.0",
+  "clean_install": "passed",
+  "reboot": "passed",
+  "reinstall": "passed",
+  "web_source_selection": "user-confirmed on final build",
+  "actual_output": "440.0 Hz and 880.0 Hz observed in hypervisor recording",
+  "final_source": "Silence",
+  "automated_tests": 45,
+  "retained_baseline": {
+    "node": {
+      "identity": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+      "name": "M3 acceptance",
+      "version": "M3"
+    },
+    "audio": {
+      "sources": [
+        {
+          "id": "Silence",
+          "name": "Silence",
+          "status": "playing"
+        },
+        {
+          "id": "Test tone 440 Hz",
+          "name": "Test tone 440 Hz",
+          "status": "playing"
+        },
+        {
+          "id": "Test tone 880 Hz",
+          "name": "Test tone 880 Hz",
+          "status": "playing"
+        },
+        {
+          "id": "default",
+          "name": "default",
+          "status": "idle"
+        }
+      ],
+      "destinations": [
+        {
+          "id": "fh-de60a1779da15a1b9348e8abda9e7859",
+          "name": "fh-m3-acceptance - Generic Analog",
+          "source_id": "Silence",
+          "volume": 100,
+          "muted": false,
+          "available": true
+        }
+      ],
+      "local_message": ""
+    },
+    "hashes": {
+      "/etc/flowharmonic/config.toml": "52633c66979ae174356aa160f1d0525422176dd29ee715f89facaa963cad34f9",
+      "/var/lib/flowharmonic/control.key": "73f4cb654ee411658b5e332bace36575d122a1c48b4350e46dd2266df3ee5a31",
+      "/etc/snapserver.conf": "d2d260afb9784ae77fa97d36a0742bcc43757da1377f3040e5bd7b932baf4560"
+    }
+  },
+  "untested": "Other distribution/architecture targets and physical audio hardware"
+}

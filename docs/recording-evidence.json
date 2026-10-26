@@ -1,0 +1,172 @@
+{
+  "format": {
+    "channels": 2,
+    "sample_rate": 44100,
+    "bits": 16
+  },
+  "tones": {
+    "440": {
+      "second": 143.5,
+      "rms": 361.4,
+      "frequency": 440.0
+    },
+    "880": {
+      "second": 158.75,
+      "rms": 361.1,
+      "frequency": 880.0
+    }
+  },
+  "active_windows": [
+    {
+      "second": 142.75,
+      "rms": 268.1,
+      "frequency": 256.0
+    },
+    {
+      "second": 143.0,
+      "rms": 296.1,
+      "frequency": 296.0
+    },
+    {
+      "second": 143.25,
+      "rms": 348.2,
+      "frequency": 412.0
+    },
+    {
+      "second": 143.5,
+      "rms": 361.4,
+      "frequency": 440.0
+    },
+    {
+      "second": 143.75,
+      "rms": 322.6,
+      "frequency": 360.0
+    },
+    {
+      "second": 148.0,
+      "rms": 361.4,
+      "frequency": 440.0
+    },
+    {
+      "second": 148.25,
+      "rms": 272.2,
+      "frequency": 248.0
+    },
+    {
+      "second": 148.5,
+      "rms": 361.4,
+      "frequency": 440.0
+    },
+    {
+      "second": 148.75,
+      "rms": 361.4,
+      "frequency": 440.0
+    },
+    {
+      "second": 149.0,
+      "rms": 160.1,
+      "frequency": 96.0
+    },
+    {
+      "second": 153.0,
+      "rms": 313.1,
+      "frequency": 344.0
+    },
+    {
+      "second": 153.25,
+      "rms": 280.0,
+      "frequency": 268.0
+    },
+    {
+      "second": 153.5,
+      "rms": 361.4,
+      "frequency": 440.0
+    },
+    {
+      "second": 153.75,
+      "rms": 361.4,
+      "frequency": 440.0
+    },
+    {
+      "second": 154.0,
+      "rms": 279.1,
+      "frequency": 272.0
+    },
+    {
+      "second": 158.0,
+      "rms": 212.5,
+      "frequency": 332.0
+    },
+    {
+      "second": 158.25,
+      "rms": 338.5,
+      "frequency": 772.0
+    },
+    {
+      "second": 158.5,
+      "rms": 306.7,
+      "frequency": 636.0
+    },
+    {
+      "second": 158.75,
+      "rms": 361.1,
+      "frequency": 880.0
+    },
+    {
+      "second": 159.0,
+      "rms": 360.5,
+      "frequency": 880.0
+    },
+    {
+      "second": 163.25,
+      "rms": 351.2,
+      "frequency": 856.0
+    },
+    {
+      "second": 163.5,
+      "rms": 279.3,
+      "frequency": 532.0
+    },
+    {
+      "second": 163.75,
+      "rms": 361.2,
+      "frequency": 880.0
+    },
+    {
+      "second": 164.0,
+      "rms": 361.2,
+      "frequency": 880.0
+    },
+    {
+      "second": 164.25,
+      "rms": 229.2,
+      "frequency": 376.0
+    },
+    {
+      "second": 168.25,
+      "rms": 266.3,
+      "frequency": 504.0
+    },
+    {
+      "second": 168.5,
+      "rms": 297.8,
+      "frequency": 600.0
+    },
+    {
+      "second": 168.75,
+      "rms": 346.4,
+      "frequency": 812.0
+    },
+    {
+      "second": 169.0,
+      "rms": 361.2,
+      "frequency": 880.0
+    },
+    {
+      "second": 169.25,
+      "rms": 323.6,
+      "frequency": 728.0
+    }
+  ],
+  "both_tones_observed": true
+}

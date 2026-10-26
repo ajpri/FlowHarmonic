@@ -1,0 +1,6 @@
+#!/bin/sh
+# Managed by FlowHarmonic installer
+# Resolve imports from the root-owned active release, never the caller's directory.
+cd /opt/flowharmonic/current || exit 1
+if [ "$#" -eq 0 ]; then set -- --help; fi
+exec /opt/flowharmonic/current/.venv/bin/python -m flowharmonic "$@"

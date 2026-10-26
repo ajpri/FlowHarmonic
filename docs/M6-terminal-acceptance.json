@@ -1,0 +1,26 @@
+{
+  "milestone": "M6",
+  "feature": "Terminal connection management",
+  "python_suite": {
+    "passed": 97,
+    "seconds": 74.594,
+    "real_snapcast_enabled": true
+  },
+  "native": {
+    "terminal_only_join": true,
+    "real_mdns_discovery": true,
+    "managed_system_discovery": true,
+    "wrong_codes_refused": true,
+    "both_approvals_required": true,
+    "web_and_cli_membership_match": true,
+    "authenticated_refresh": true,
+    "cli_works_with_local_web_service_stopped": true,
+    "remove_reject_cancel_leave_and_dissolve": true,
+    "service_user_file_ownership": true,
+    "primary_node_restored_independent": true
+  },
+  "environment": "Two independent processes in separate network namespaces on the existing Ubuntu 22.04 x86_64 test VM; not two physical machines.",
+  "cleanup": "Temporary node services and virtual LAN removed; test sessions revoked; original node remains independent.",
+  "new_management_endpoints": false,
+  "new_dependencies": false
+}

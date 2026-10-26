@@ -1,0 +1,10 @@
+[Unit]
+Description=Retry FlowHarmonic audio detection and setup
+
+[Timer]
+OnBootSec=15
+OnUnitInactiveSec=15
+Unit=flowharmonic-audio.service
+
+[Install]
+WantedBy=timers.target

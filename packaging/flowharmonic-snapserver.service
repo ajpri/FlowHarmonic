@@ -1,0 +1,20 @@
+[Unit]
+Description=FlowHarmonic local audio server
+After=network.target
+
+[Service]
+User=flowharmonic-snapcast
+Group=flowharmonic-snapcast
+ExecStart=/opt/flowharmonic/snapcast/0.30.0/bin/snapserver --config /etc/flowharmonic/snapserver.conf
+StateDirectory=flowharmonic-snapcast
+RuntimeDirectory=flowharmonic-snapcast
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

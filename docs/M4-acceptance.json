@@ -1,0 +1,90 @@
+{
+  "milestone": "M4",
+  "tested_on": "2026-10-26",
+  "environment": {
+    "distribution": "Ubuntu 22.04 x86_64",
+    "desktop_fixture": "logind X11 session with Xvfb/Openbox and virtual HDA output",
+    "pipewire": "0.3.48",
+    "wireplumber": "0.4.8",
+    "snapcast": "0.25.0"
+  },
+  "audio": {
+    "desktop_source_available": true,
+    "default_before": [
+      {
+        "subject": 0,
+        "key": "default.audio.sink",
+        "type": "Spa:String:JSON",
+        "value": {
+          "name": "alsa_output.pci-0000_00_03.0.analog-stereo"
+        }
+      }
+    ],
+    "web_api_route_confirmed": true,
+    "normal_speaker_links": 2,
+    "capture_app_links": 2,
+    "capture_snapclient_links": 0,
+    "capture_microphone_links": 0,
+    "received_660_amplitude": 999.377,
+    "received_880_amplitude": 0.0,
+    "local_speaker_660_amplitude": 999.52,
+    "fh_only_capture_peak": 0,
+    "default_after": [
+      {
+        "subject": 0,
+        "key": "default.audio.sink",
+        "type": "Spa:String:JSON",
+        "value": {
+          "name": "alsa_output.pci-0000_00_03.0.analog-stereo"
+        }
+      }
+    ],
+    "default_unchanged": true,
+    "passed": true
+  },
+  "lifecycle": {
+    "stalled_capture_message": "Desktop capture stopped delivering audio. Capture will retry automatically.",
+    "stalled_worker_recovered": true,
+    "pipewire_outage_message": "Desktop audio is starting or unavailable. Capture will retry automatically.",
+    "pipewire_recovered": true,
+    "logout_message": "Log in to a local PipeWire desktop to share desktop audio.",
+    "new_login_recovered": true,
+    "health_available_during_checks": true,
+    "passed": true
+  },
+  "retention": {
+    "identity_retained": true,
+    "configuration_retained": true,
+    "password_retained": true,
+    "browser_sessions_retained": true,
+    "health": {
+      "status": "ok",
+      "version": "M4",
+      "identity": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+      "schema_version": 1,
+      "build": "M4-20261026T111959Z-T2MBV7rt"
+    },
+    "application_files_match_repository": true
+  },
+  "regression": {
+    "python_tests_passed": 72,
+    "real_snapcast_included": true,
+    "dashboard_dom_harness_passed": true,
+    "python_compilation_passed": true,
+    "shell_syntax_passed": true
+  },
+  "limitations": [
+    "Other distribution/architecture native validation remains pending.",
+    "Wayland detection is implemented but no native Wayland acceptance run was performed.",
+    "Capture requires an FH-owned local Snapcast installation and one primary-seat PipeWire desktop.",
+    "Custom JACK/filter graphs and surround channels beyond the front stereo pair are unsupported.",
+    "UI validation used the shipped JavaScript DOM harness and authenticated HTTP API, not a visual browser click-through."
+  ],
+  "reboot": {
+    "reboot_health_ok": true,
+    "identity_retained": true,
+    "capture_pipe_recreated": true,
+    "desktop_login_capture_resumed_automatically": true,
+    "passed": true
+  }
+}

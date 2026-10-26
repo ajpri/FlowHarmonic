@@ -1,0 +1,134 @@
+{
+  "milestone": "M5",
+  "tested_on": "2026-10-26",
+  "environment": {
+    "distribution": "Ubuntu 22.04 x86_64",
+    "desktop": "logind X11/Openbox/Xvfb fixture; virtual HDA output",
+    "snapcast": "0.25.0",
+    "pipewire": "0.3.48",
+    "coordinator_required": false
+  },
+  "native_acceptance": {
+    "controls_and_recovery": {
+      "source_switch_440": {
+        "mode": "tone440",
+        "passed": true
+      },
+      "tone440": {
+        "440_amplitude": 55.867,
+        "880_amplitude": 0.038,
+        "peak": 76
+      },
+      "source_switch_880": {
+        "mode": "tone880",
+        "passed": true
+      },
+      "tone880": {
+        "440_amplitude": 0.085,
+        "880_amplitude": 45.198,
+        "peak": 76
+      },
+      "mute_control": {
+        "mode": "mute",
+        "passed": true
+      },
+      "muted": {
+        "440_amplitude": 0,
+        "880_amplitude": 0,
+        "peak": 0
+      },
+      "naming_and_diagnostics": {
+        "mode": "persist",
+        "passed": true
+      },
+      "audio_settings_reached_disk": true,
+      "application_recovery": {
+        "mode": "app-recovery",
+        "passed": true
+      },
+      "server_recovery": {
+        "mode": "server-recovery",
+        "passed": true
+      },
+      "playback_recovery": {
+        "mode": "client-recovery",
+        "passed": true
+      },
+      "local_settings_retained": {
+        "mode": "verify",
+        "passed": true
+      },
+      "no_coordinator": true,
+      "passed": true,
+      "audio_server_kept_running_during_application_restart": true
+    },
+    "repeated_crashes": {
+      "application_crashes": 6,
+      "automatic_recovery_passed": true
+    },
+    "headless_boot": {
+      "application_started": true,
+      "local_hardware_available_before_desktop_login": true
+    },
+    "reboot": {
+      "ui": {
+        "mode": "verify",
+        "passed": true
+      },
+      "identity_retained": true,
+      "audio_settings_on_disk": true,
+      "configuration_retained": true,
+      "password_retained": true,
+      "original_browser_sessions_retained": true,
+      "diagnostics_available": true,
+      "passed": true
+    },
+    "reinstall": {
+      "ui": {
+        "mode": "verify",
+        "passed": true
+      },
+      "identity_retained": true,
+      "audio_settings_on_disk": true,
+      "configuration_retained": true,
+      "password_retained": true,
+      "original_browser_sessions_retained": true,
+      "diagnostics_available": true,
+      "passed": true
+    },
+    "older_reader": {
+      "older_M4_application_reads_M5_identity_database": true,
+      "identity_retained": true,
+      "additive_settings_retained": true
+    },
+    "cleanup": {
+      "original_names_and_audio_restored": true,
+      "test_session_revoked": true
+    },
+    "installed_diagnostics_command_passed": true,
+    "installed_application_matches_repository": true,
+    "health": {
+      "status": "ok",
+      "version": "M5",
+      "identity": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+      "schema_version": 1,
+      "build": "M5-20261026T153448Z-vuy2PP22"
+    },
+    "temporary_session_file_removed": true
+  },
+  "regression": {
+    "python_tests_passed": 79,
+    "real_snapcast_test_included": true,
+    "javascript_dom_harness_passed": true,
+    "javascript_syntax_passed": true,
+    "python_compilation_passed": true,
+    "shell_syntax_passed": true
+  },
+  "limitations": [
+    "Native acceptance has not been completed on other distributions/architectures or Wayland.",
+    "Dashboard validation uses shipped event handlers in a minimal DOM against real HTTP, not a visual browser click-through.",
+    "Snapcast defers disk writes; immediate abrupt loss can lose unsaved audio-setting changes.",
+    "Existing externally owned services are never repaired or restarted by FH.",
+    "The existing trusted-LAN HTTP boundary and M4 capture boundaries remain unchanged."
+  ]
+}

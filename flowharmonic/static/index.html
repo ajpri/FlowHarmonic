@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FlowHarmonic</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+  <script src="/static/network.js" defer></script>
+</head>
+<body>
+  <header><a class="brand" href="/" aria-label="FlowHarmonic home">FlowHarmonic</a><div class="header-actions"><span id="connection" role="status">Connecting…</span><button id="sign-out" type="button">Sign out</button></div></header>
+  <main>
+    <p id="error" role="alert" hidden></p>
+    <button id="retry" type="button" hidden>Try again</button>
+    <p id="notice" role="status"></p>
+    <div class="panels">
+      <section aria-labelledby="sources-heading"><div class="panel-heading"><h2 id="sources-heading">Sources</h2><span class="count" id="source-count">—</span></div><div id="sources"><p class="empty">Loading sources…</p></div></section>
+      <section aria-labelledby="destinations-heading">
+        <div class="panel-heading"><h2 id="destinations-heading">Destinations</h2><span class="count" id="destination-count">—</span></div>
+        <div id="destinations"><p class="empty">Loading destinations…</p></div>
+      </section>
+    </div>
+    <p id="local-status" role="status"></p>
+    <details id="node-settings">
+      <summary>Node settings</summary>
+      <form id="node-settings-form">
+        <label for="node-name-input">Node name</label>
+        <input id="node-name-input" type="text" required maxlength="80" autocomplete="off">
+        <button id="save-node" type="submit">Save name</button>
+      </form>
+    </details>
+    <details id="network-settings">
+      <summary id="network-summary">Connections</summary>
+      <p id="network-message" role="status"></p>
+      <button id="refresh-network" type="button">Refresh connections</button>
+      <div id="network-content"></div>
+      <form id="create-system-form">
+        <label for="system-name-input">Create a system</label>
+        <input id="system-name-input" type="text" required maxlength="80" placeholder="System name" autocomplete="off">
+        <button type="submit">Create system</button>
+      </form>
+      <form id="join-system-form">
+        <label for="system-address-input">Connect using an address</label>
+        <input id="system-address-input" type="url" required maxlength="512" placeholder="http://192.168.1.20:8080" autocomplete="off">
+        <button type="submit">Request to join</button>
+      </form>
+      <div id="nearby-nodes"></div>
+    </details>
+    <details id="diagnostics">
+      <summary>Diagnostics</summary>
+      <button id="refresh-diagnostics" type="button">Refresh diagnostics</button>
+      <div id="diagnostics-content" aria-live="polite"></div>
+    </details>
+    <noscript><p>Enable JavaScript to view and control audio.</p></noscript>
+  </main>
+  <footer><span id="node-name">Local device</span><span id="version">M6</span></footer>
+</body>
+</html>

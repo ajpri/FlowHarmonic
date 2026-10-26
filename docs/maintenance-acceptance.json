@@ -1,0 +1,18 @@
+{
+  "result": "passed",
+  "checks": [
+    "PATH command outside checkout",
+    "real hidden terminal password setup",
+    "confirmed password reset",
+    "password never echoed",
+    "credential ownership and mode",
+    "all old sessions revoked",
+    "old password rejected",
+    "identity unchanged",
+    "Ctrl+C leaves credentials intact",
+    "noninteractive input refused",
+    "status command"
+  ],
+  "real_user_password_set": false,
+  "audio_changes": "none"
+}

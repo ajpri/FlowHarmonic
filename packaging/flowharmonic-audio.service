@@ -1,0 +1,31 @@
+[Unit]
+Description=FlowHarmonic local audio provisioning
+Wants=flowharmonic.service sound.target
+After=flowharmonic.service sound.target network.target
+
+[Service]
+Type=oneshot
+StateDirectory=flowharmonic-audio
+StateDirectoryMode=0755
+RuntimeDirectory=flowharmonic-desktop
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+User=root
+WorkingDirectory=/opt/flowharmonic/current
+ExecStart=/opt/flowharmonic/current/.venv/bin/python -m flowharmonic.provision
+Environment=FLOWHARMONIC_CONFIG=/etc/flowharmonic/config.toml
+Environment=PYTHONDONTWRITEBYTECODE=1
+TimeoutStartSec=90
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/etc/flowharmonic /etc/systemd/system /var/lib/flowharmonic-audio /run/flowharmonic-desktop
+# Desktop capture runs unprivileged and is bound to its local login session.
+# Debian package units also synchronize their legacy SysV startup links.
+ReadWritePaths=-/etc/rc0.d -/etc/rc1.d -/etc/rc2.d -/etc/rc3.d -/etc/rc4.d -/etc/rc5.d -/etc/rc6.d -/etc/rcS.d
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+UMask=0022
+
+[Install]
+WantedBy=multi-user.target
