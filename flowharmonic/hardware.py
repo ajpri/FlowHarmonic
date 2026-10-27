@@ -57,3 +57,52 @@ def probe_output(device):
         return ''
     finally:
         alsa.snd_pcm_close(handle)
+
+
+def capture_inputs(proc=Path('/proc/asound'), sys=Path('/sys/class/sound')):
+    """Stable physical ALSA identities; never use the default capture device."""
+    inputs=[]
+    for card in sorted(proc.glob('card[0-9]*')):
+        if not card.is_dir() or not re.fullmatch(r'card\d+',card.name):continue
+        card_id=(card/'id').read_text().strip()
+        if not re.fullmatch(r'[A-Za-z0-9_-]+',card_id):continue
+        physical=str((sys/card.name/'device').resolve()) if (sys/card.name/'device').exists() else card_id
+        for pcm in sorted(card.glob('pcm*c')):
+            match=re.fullmatch(r'pcm(\d+)c',pcm.name)
+            if not match or not (pcm/'info').exists():continue
+            info=dict(line.split(':',1) for line in (pcm/'info').read_text().splitlines() if ':' in line)
+            device=int(match[1]);# A different USB product in the same port must not inherit capture.
+            fingerprint=[physical,card_id]
+            hardware=(sys/card.name/'device').resolve()
+            for parent in [hardware,*hardware.parents]:
+                if (parent/'idVendor').exists() and (parent/'idProduct').exists():
+                    vendor=(parent/'idVendor').read_text().strip();product=(parent/'idProduct').read_text().strip()
+                    serial=(parent/'serial').read_text().strip() if (parent/'serial').exists() else ''
+                    fingerprint=['usb',vendor,product,serial] if serial else [physical,card_id,vendor,product]
+                    break
+            key=hashlib.sha256((':'.join(fingerprint)+f':capture:{device}').encode()).hexdigest()[:20]
+            inputs.append({'key':'alsa:'+key,'name':card_id+' — '+info.get('name','Audio input').strip(),
+                           'device':f'plughw:CARD={card_id},DEV={device}','backend':'alsa','channels':capture_channels(f'hw:CARD={card_id},DEV={device}')})
+    return inputs
+
+
+def capture_channels(device):
+    """Read hardware channel capability without recording or changing a mixer."""
+    name=ctypes.util.find_library('asound')
+    if not name:return 0
+    alsa=ctypes.CDLL(name);handle=ctypes.c_void_p();params=ctypes.c_void_p()
+    alsa.snd_pcm_open.argtypes=[ctypes.POINTER(ctypes.c_void_p),ctypes.c_char_p,ctypes.c_int,ctypes.c_int]
+    alsa.snd_pcm_hw_params_malloc.argtypes=[ctypes.POINTER(ctypes.c_void_p)]
+    alsa.snd_pcm_hw_params_any.argtypes=[ctypes.c_void_p,ctypes.c_void_p]
+    alsa.snd_pcm_hw_params_get_channels_max.argtypes=[ctypes.c_void_p,ctypes.POINTER(ctypes.c_uint)]
+    alsa.snd_pcm_hw_params_free.argtypes=[ctypes.c_void_p];alsa.snd_pcm_close.argtypes=[ctypes.c_void_p]
+    if alsa.snd_pcm_open(ctypes.byref(handle),device.encode(),1,1)<0:return 0
+    try:
+        if alsa.snd_pcm_hw_params_malloc(ctypes.byref(params))<0:return 0
+        try:
+            if alsa.snd_pcm_hw_params_any(handle,params)<0:return 0
+            channels=ctypes.c_uint()
+            if alsa.snd_pcm_hw_params_get_channels_max(params,ctypes.byref(channels))<0:return 0
+            return min(32,channels.value)
+        finally:alsa.snd_pcm_hw_params_free(params)
+    finally:alsa.snd_pcm_close(handle)

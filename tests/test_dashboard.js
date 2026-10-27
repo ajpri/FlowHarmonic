@@ -23,7 +23,7 @@ async function fetch(url, options) {
     else assert.fail(`Unexpected mutation ${url}`);
   }
   if (!data && url.startsWith('/api/auth')) data = {configured: server.configured, authenticated: server.session};
-  else if (url === '/api/node') data = {name: 'Test device', version: 'M6'};
+  else if (url === '/api/node') data = {name: 'Test device', version: 'M9'};
   else if (url === '/api/audio') {
     if (!server.audioOnline) { status = 503; data = {detail: 'Audio unavailable'}; }
     else data = {sources: [{id: 'Silence', name: 'Silence', status: 'playing'}], destinations: [{id: 'test', name: 'Test output', source_id: 'Silence', volume: 70, muted: false, available: server.outputOnline}]};

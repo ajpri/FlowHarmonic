@@ -67,6 +67,42 @@ class ProvisionTests(unittest.TestCase):
         with patch('flowharmonic.provision.time.sleep'):
             return p.provision(self.config, audio=Audio())
 
+    def test_progress_saves_ownership_without_publishing_partial_device_inventory(self):
+        status = self.etc / 'local-audio.json'
+        complete = {'owner':self.node, 'destinations':[{'id':'speaker','name':'Office'}],
+                    'sources':[{'id':'microphone'}], 'owned_units':[]}
+        status.write_text(json.dumps(complete))
+        provisioner = Provisioner(self.root)
+        provisioner.status['owner'] = self.node
+        provisioner.status['sources'] = []
+        provisioner.status['owned_units'].append('flowharmonic-playback-12345678901234567890.service')
+        provisioner.save(progress=True)
+        observed = json.loads(status.read_text())
+        self.assertEqual(observed['destinations'], complete['destinations'])
+        self.assertEqual(observed['sources'], complete['sources'])
+        self.assertIn('flowharmonic-playback-12345678901234567890.service', observed['owned_units'])
+        provisioner.save()
+        self.assertEqual(json.loads(status.read_text())['destinations'], [])
+
+    def test_configured_sources_have_owned_workers_and_leave_external_services_alone(self):
+        from flowharmonic.sources import Sources
+        store=Sources(self.root/'var/lib/flowharmonic')
+        identifier=str(uuid.uuid4())
+        store.save({'id':identifier,'name':'Microphone','kind':'input','device':'alsa:known','channels':[1],'state':'stopped'})
+        before=self.base.read_bytes()
+        result=self.provision()
+        self.assertEqual(self.base.read_bytes(),before)
+        unit=self.root/'etc/systemd/system'/('flowharmonic-source-'+identifier+'.service')
+        self.assertTrue(unit.read_text().startswith(MARKER))
+        self.assertIn('User=flowharmonic',unit.read_text())
+        self.assertEqual(result['sources'][0]['id'],'fh-source-'+identifier)
+        self.assertIn('name=fh-source-'+identifier,(self.etc/'local-snapserver.conf').read_text())
+        store.remove(identifier);self.provision();self.assertFalse(unit.exists())
+        self.assertEqual(self.base.read_bytes(),before)
+        store.save({'id':identifier,'name':'Microphone','kind':'input','device':'alsa:known','channels':[1],'state':'playing'})
+        self.ledger.write_text(json.dumps({'server':'existing','client':'existing'}))
+        self.provision();self.assertFalse(unit.exists())
+
     def test_fresh_provisioning_preserves_configuration_and_identity(self):
         before = self.base.read_bytes()
         result = self.provision()

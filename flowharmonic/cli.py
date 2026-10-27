@@ -11,6 +11,8 @@ import time
 import urllib.error
 import urllib.request
 import warnings
+import zipfile
+from pathlib import Path
 
 from . import VERSION
 from .config import data_directory, load_config
@@ -102,6 +104,8 @@ def main(argv=None):
   sudo flowharmonic diagnostics         Check local audio and services
   sudo flowharmonic connections         Show system membership and requests
   sudo flowharmonic connections --help  Manage connections from a terminal
+  sudo flowharmonic backup /root/fh.zip Export private node configuration
+  sudo flowharmonic restore /root/fh.zip Restore configuration after confirmation
   sudo flowharmonic logs                Show recent application logs
   sudo flowharmonic restart             Restart the application
 
@@ -118,6 +122,9 @@ Run maintenance commands on the machine where FlowHarmonic is installed.''')
     password_parser.add_argument('--if-needed', action='store_true', help=argparse.SUPPRESS)
     commands.add_parser('logs', help='Show the latest 50 application log entries')
     commands.add_parser('restart', help='Restart and verify the application service')
+    for command in ('backup', 'restore'):
+        backup_parser = commands.add_parser(command, help='Export private configuration' if command == 'backup' else 'Restore this node’s configuration (requires confirmation)')
+        backup_parser.add_argument('file', help='Private backup archive path')
     from . import connections_cli
     connections_cli.add_parser(commands)
     args = parser.parse_args(argv)
@@ -125,10 +132,14 @@ Run maintenance commands on the machine where FlowHarmonic is installed.''')
         if args.command == 'password':
             change_password(args.if_needed)
             return
-        if args.command in ('logs', 'restart', 'diagnostics', 'name', 'connections') and os.geteuid() != 0:
+        if args.command in ('logs', 'restart', 'diagnostics', 'name', 'connections', 'backup', 'restore') and os.geteuid() != 0:
             raise RuntimeError(f'Run with sudo: sudo flowharmonic {args.command}')
         if args.command == 'logs':
             subprocess.run(['journalctl', '-u', 'flowharmonic.service', '-n', '50', '--no-pager'], check=True)
+            return
+        if args.command in ('backup', 'restore'):
+            from .backup import run
+            run(args, data_directory(), Path(os.environ.get('FLOWHARMONIC_CONFIG', '/etc/flowharmonic/config.toml')))
             return
         config = load_config()
         if args.command == 'connections':
@@ -173,5 +184,5 @@ Run maintenance commands on the machine where FlowHarmonic is installed.''')
             uvicorn.run('flowharmonic.app:app', host=config['host'], port=config['port'], proxy_headers=False)
     except (EOFError, KeyboardInterrupt):
         parser.exit(130, '\nCommand cancelled.\n')
-    except (OSError, RuntimeError, ValueError, NetworkError, getpass.GetPassWarning, subprocess.CalledProcessError, sqlite3.Error) as error:
+    except (OSError, RuntimeError, ValueError, NetworkError, getpass.GetPassWarning, subprocess.CalledProcessError, sqlite3.Error, zipfile.BadZipFile, KeyError) as error:
         parser.exit(1, f'FlowHarmonic: {error}\n')

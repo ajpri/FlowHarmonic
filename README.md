@@ -1,8 +1,8 @@
-# FlowHarmonic · M6
+# FlowHarmonic · M9
 
 Share PipeWire desktop audio, automatically provision local playback hardware, and control existing Snapcast systems. Python 3.10+, FastAPI,
 SQLite, and plain HTML/CSS/JavaScript. [SPEC.md](SPEC.md) is the source of truth.
-Application versions are milestone identifiers: **M6**, with a separate build
+Application versions are milestone identifiers: **M9**, with a separate build
 fingerprint for installation checks. No semantic application versions.
 
 ## Install or update
@@ -19,16 +19,14 @@ LAN, use this device's address and port. Existing firewall rules are preserved.
 
 Implemented installer targets: Debian 12/13, Ubuntu 22.04/24.04, Raspberry Pi OS
 12/13 (64-bit), Fedora 42/43; x86_64/aarch64 where applicable. Ubuntu 22.04 x86_64 has passed clean installation, reboot, and reinstall in an
-audio-equipped VM. Other entries remain **unvalidated distribution targets**:
-the installer harness simulates package/account/systemd commands. Actual Fedora
-compilation/SELinux behavior and the remaining release/architecture combinations
-are still pending. See
-[foundation verification](docs/verification.md).
+audio-equipped VM. Fedora 43 x86_64 has also passed native installation and M7
+cross-node audio tests with SELinux enforcing. Remaining releases and architectures
+remain unvalidated targets. See [M7 verification](docs/M7-verification.md).
 
 A reinstall stages a new release, retains identity and configuration, backs up
 SQLite/configuration/credentials, repairs the service unit and missing app files,
 checks the new build's health, and restores the previous app/unit on activation
-failure. There is no destructive database migration in M6. Identity schema remains 1;
+failure. There is no destructive database migration in M9. Identity schema remains 1;
 an additive, versioned local-settings table preserves older-release identity readers. Existing M1
 configurations continue to work unchanged, using the local audio server default.
 The application remains unprivileged and systemd enables startup after reboot.
@@ -48,11 +46,11 @@ snapcast_url = "tcp://192.168.1.50:1705"
 Restart FH with `sudo systemctl restart flowharmonic`. The configured server must
 already allow RPC connections from FH. FH does not change a remote server's
 firewall, RPC listeners, OS services, or configuration files. One configured
-server per installation is supported in M6. TLS uses normal certificate
+server per installation is supported in M9. TLS uses normal certificate
 verification. Redirects, URL credentials, and Snapcast-specific login protocols
 are not supported; use an accessible endpoint on a trusted network. TCP/HTTP
 transport is unencrypted; use a trusted LAN or a secure tunnel/HTTPS endpoint.
-Local hardware provisioning, PipeWire desktop capture, node settings, and local diagnostics are included. LAN discovery and approved system enrollment are included; systemwide audio control remains M7.
+Local hardware provisioning, PipeWire desktop capture, node settings, and local diagnostics are included. LAN discovery and approved system enrollment are included; systemwide audio control is included in M7.
 
 The dashboard opens a separate sign-in page. Sign in with the single management
 password; there are no accounts, Lock/Unlock controls, setup links, or key entry.
@@ -141,7 +139,7 @@ The dashboard continues controlling the selected server through RPC.
 
 | Path | Purpose |
 | --- | --- |
-| `/opt/flowharmonic/releases/M6-…/` | Root-owned app and per-release venv |
+| `/opt/flowharmonic/releases/M9-…/` | Root-owned app and per-release venv |
 | `/opt/flowharmonic/current` | Atomic link to active release |
 | `/etc/flowharmonic/config.toml` | Preserved device name, listener, and audio endpoint |
 | `/etc/flowharmonic/infrastructure.json` | Preserved ownership ledger |
@@ -149,9 +147,11 @@ The dashboard continues controlling the selected server through RPC.
 | `/etc/flowharmonic/local-snapserver.conf` | Generated configuration for the owned local server |
 | `/var/lib/flowharmonic-audio/tones/` | Fixed PCM test-source assets |
 | `/var/lib/flowharmonic/flowharmonic.db` | Schema 1, persistent node UUID |
+| `/var/lib/flowharmonic/sources.db` | Schema 1, named source settings and requested playback state, mode 0600 |
+| `/var/lib/flowharmonic/coordination.db` | Schema 1, source visibility, observed inventory and coordinated routes, mode 0600 |
 | `/var/lib/flowharmonic/authentication.db` | Password hash and hashed remembered sessions, mode 0600 |
 | `/usr/local/bin/flowharmonic` | Installed maintenance command using the active release |
-| `/var/lib/flowharmonic/backups/M6-…/` | Root-only pre-activation backups |
+| `/var/lib/flowharmonic/backups/M9-…/` | Root-only pre-activation backups |
 
 ```bash
 systemctl status flowharmonic
@@ -177,11 +177,11 @@ retained. Rollback restores FH code and unit, not OS packages or audio changes,
 and never silently restores an old database. A newer/unknown database is refused.
 An existing installation with a missing database is not given a new identity.
 Power loss/SIGKILL cannot run the rollback trap; rerun repair while retaining data.
-There is no remote update feed, automatic pruning, or uninstaller in M6.
+There is no remote update feed, automatic pruning, or uninstaller in M9.
 
 ## Standalone node (M5)
 
-M5's local audio controls continue to work independently in M6.
+M5's local audio controls continue to work independently in M7.
 
 Each installation works independently through its local dashboard. No coordinator,
 cloud service, or other FH node is required. Use local test sources or Desktop
@@ -367,11 +367,10 @@ appear automatically; discovery alone grants no access and changes no audio.
 4. On the joining node, refresh if needed, check the matching code, and choose
    **Confirm and join**. Both nodes now retain the same system membership.
 
-The system host in M6 holds membership only. It does not collect remote sources,
-change audio routing, replace existing audio servers, or disable local components.
-Central audio management is M7. Creating a system requires no installation role
-choice. Requests expire after ten minutes. Each installation keeps its own local
-password; no dashboard password or private signing key is sent to another node.
+Creating a system activates this node as coordinator. Joined nodes report actual
+sources and destinations; central routing is described below. Requests expire after
+ten minutes. Each installation keeps its own local password; no dashboard password
+or private signing key is sent to another node.
 
 If discovery is blocked, use **Connect using an address** with the system host's
 LAN URL, for example `http://192.168.1.20:8080`. An SSH-forwarded localhost address
@@ -387,9 +386,10 @@ system host. An outage preserves membership and displays a readable error.
 **Leave system** revokes the local membership even when the host is offline;
 remove its stale entry on the host if necessary. A host can remove a member or
 **Dissolve system**. Removed members clear their membership at their next successful
-connection refresh. Audio, identity, names, and browser passwords remain unchanged.
+connection refresh. Identity, names, passwords, and standalone settings remain unchanged. Coordinated
+routes end on leaving; FH-owned players return to their local server.
 Cancelling a pending request removes it locally; the unapproved request on the
-host expires. No automatic enrollment or automatic audio reconfiguration occurs.
+host expires. Enrollment is never automatic. Audio is rerouted only by an explicit selection.
 
 Membership and Ed25519 signing keys live in protected
 `/var/lib/flowharmonic/network.db` (schema 1, mode 0600), separately from node
@@ -403,12 +403,12 @@ All peer messages and responses are signed and bound to sender, recipient,
 system, operation, request nonce, timestamp, and body. A persisted replay cache
 rejects reused messages. Joined communication pins the keys approved with the
 matching verification code. Devices' clocks must be within two minutes.
-Membership authorizes only the small M6 peer protocol, never browser sessions,
-privileged maintenance, arbitrary RPC calls, or audio controls. The protocol is
+Membership authorizes the enrollment and bounded M7 coordination protocol, never
+browser sessions, privileged maintenance, or arbitrary RPC calls. The protocol is
 signed HTTP on a trusted LAN; it does not encrypt metadata. Sign into dashboards
 over a trusted network or an encrypted tunnel and compare codes before approval.
 Manual peer connections reject public/link-local targets, credentials in URLs,
-redirects and proxies. Automatic TLS provisioning remains outside M6.
+redirects and proxies. Automatic TLS provisioning remains outside M7.
 
 Protected API: `GET /api/network`; `POST /api/network/create` (`name`), `/allow`
 (`enabled`), `/join` (`url`, optional discovered `identity`), `/requests/{id}`
@@ -421,3 +421,165 @@ See [M6 verification and acceptance evidence](docs/M6-verification.md).
 The implementation uses [python-zeroconf](https://python-zeroconf.readthedocs.io/en/stable/api.html)
 for standard mDNS and [cryptography's Ed25519 implementation](https://cryptography.io/en/latest/hazmat/primitives/asymmetric/ed25519/)
 for signing rather than implementing either primitive in FH.
+
+
+## Central coordination (M7)
+
+Create and join a system using **Connections** or the documented
+`sudo flowharmonic connections` commands. The system host becomes coordinator;
+no separate installation role is needed. Sign into its dashboard to see all
+actual sources and destinations, with node names and connection status. A node
+is not itself an audio source. A member's dashboard controls its own destinations
+using the coordinator and retains its local settings and diagnostics.
+
+Choose a source on a destination. FH-owned players connect automatically, then
+source selection, volume and mute are applied through Snapcast. Allow up to about
+20 seconds for the provisioning timer and report cycle. Existing Snapcast clients
+can still use sources on their existing server; FH never retargets services it
+did not provision. An existing server used across nodes must already expose its
+stream listener. Set optional `snapcast_stream_port = 1704` in FH configuration
+if that listener uses another port; FH does not edit that server.
+
+Under **Node settings**, expand source visibility and uncheck a source to hide
+it from new systemwide selections. Its current routes, capture, destinations and
+normal desktop output continue. Recheck to show it again. Visibility is saved on
+the source node and survives reinstall, restart, reboot and coordinator reconnect.
+It is a list preference, not an access-control boundary. Hide all published sources
+on a speaker node for a destination-only presentation.
+
+The coordinator stores route intent and confirms application through Snapcast.
+Existing playback continues if its FH coordinator process is unavailable, while
+new changes wait for reconnection. This does not protect audio against loss of
+the actual source machine or Snapcast service. Node settings, diagnostics and
+leaving remain local. Leaving returns FH-owned players to their local server;
+there is no automatic coordinator election, scenes or M9 recovery engine.
+
+For joined, FH-owned servers only, the generated IPv4 stream listener is exposed
+on TCP 1704 (or its configured port), while management listeners bind loopback.
+Allow the stream port and dashboard port on the intended trusted LAN if a firewall
+blocks them. FH preserves firewall rules. Snapcast audio transport is unencrypted;
+joined control messages are signed. M7 does not supply transport encryption.
+
+See [M7 acceptance evidence and repeatable checks](docs/M7-verification.md).
+
+
+## Additional local sources (M8)
+
+Open **Local source setup** on the node that owns the input or music files.
+Automatic source publication requires an FH-provisioned local Snapcast stack;
+existing infrastructure is retained. Give each source a name and add it. New sources
+start **stopped**. Use **Start**
+or **Play**, then select that source on a destination in the ordinary dashboard.
+Adding or starting capture never routes it to speakers automatically. Setup
+changes apply automatically within about 20 seconds; no service/config edits
+are needed. **Edit** changes a name or selection; **Remove** stops and removes
+that configured source. Existing routes using a removed source lose its audio.
+
+For a microphone, line-in or USB audio interface, choose its exact input and
+one channel or a pair, numbered from 1 (for example `1` or `1,2`). Mono is copied
+to both stereo output channels. PipeWire physical inputs are used in a local
+desktop session; ALSA inputs are available without one. Speaker monitors are
+excluded. Input availability depends on the device's active OS input profile;
+FH does not change hardware mixer controls or the selected profile. Devices busy
+with exclusive recording can report unavailable. A disconnected configured input
+keeps its identity, name, channel selection and enabled state. Capture retries
+when that exact input returns, without switching to a default input or enabling
+local monitoring.
+
+For music, enter an absolute folder path on the installed node, then choose
+**Read tracks** and a track (or the first track). Supported extensions are WAV,
+FLAC, Ogg, Opus, MP3 and M4A, subject to the installed FFmpeg decoder's codec
+support. The folder must already be readable by the unprivileged `flowharmonic`
+service; FH never changes folder permissions. Playback runs through tracks in
+sorted order and loops. **Pause** retains the running decoder's position;
+**Play** resumes it. **Stop** ends playback; the next Play starts the selected
+track again. A service restart/reinstall retains the selected folder, track and
+requested state, but not the exact playback position. No music server or streaming
+service integration is introduced.
+
+For Bluetooth, expand **Bluetooth pairing** and enable its two-minute window.
+Select the node from the phone/device, compare the displayed code and explicitly
+approve or reject it. Pairing status and paired/connected device names appear
+there. Close pairing when done; the prior discoverable/pairable flags are restored.
+Choose **Trust and connect** for that paired device, then add a named Bluetooth
+receiver using it, Start it and route
+it like another source. Trust and connect, Disconnect and Forget apply only to the selected
+device. No adapter or unsupported Bluetooth audio produces a readable unavailable
+state and does not prevent other sources from working. Reception uses the local
+BlueZ and PipeWire A2DP receiver with a local graphical PipeWire session; legacy
+PIN-only pairing and headless Bluetooth audio are not supported. Existing Bluetooth
+or PipeWire configuration is retained; FH does not replace desktop session services.
+
+Source preferences live in protected schema-1 `sources.db`, included in installer
+backups. New workers run unprivileged and use only FH-owned pipes/services. The
+capability-free root BlueZ agent reads only a separate mode-0640 Bluetooth command
+file through its intended group; password, session and signing-key databases stay
+mode 0600. Pairing confirmations are bound to the currently displayed request.
+
+See [M8 implementation and acceptance evidence](docs/M8-verification.md), including
+which native source types and environments have actually been demonstrated.
+
+
+## Scenes and reliability (M9)
+
+Open **Scenes** on an independent node or the system coordinator. Give the scene
+ a name, select connected destinations, and choose **Save current settings**.
+Each saved destination includes its selected source, volume, and mute state.
+Change the current settings, then choose **Apply** next to the scene to restore
+them. **Remove** deletes only the scene. Scenes on a coordinator belong to its
+managed system; joined nodes direct you to the coordinator’s dashboard.
+
+Applying a scene is an operation on each selected destination, not a simultaneous
+transaction across machines. Results identify destinations that could not be
+changed. Available destinations can succeed while another fails; reconnect the
+missing device and apply the scene again. A hidden or unavailable source cannot
+be selected by a scene. Scenes save routing, not music-player track or lifecycle
+state: start a stopped source through Local source setup first.
+
+FH remembers assignments changed through its controls. Once a destination and its
+saved source reconnect, FH restores the source, volume, mute and name without
+manual audio configuration. A managed node follows the coordinator’s saved
+routing intent; standalone recovery does not override it. Existing routes can
+continue while the coordinator is offline. FH-owned services restart after crashes
+and boot normally. Unavailable sources/devices retain readable status; the last
+complete inventory remains visible while detection runs. Diagnostics reports
+routing recovery errors. Existing Snapcast services are controlled through their
+normal API; FH does not take ownership of their service/configuration.
+
+### Private configuration backup and restore
+
+On **each node**, use the installed administrator command:
+
+```sh
+sudo flowharmonic backup /root/flowharmonic.zip
+sudo flowharmonic restore /root/flowharmonic.zip
+```
+
+Backup refuses to overwrite a file. It briefly stops FH configuration writers,
+then restarts the previously active services. Audio players are left running.
+The root-readable archive (mode 0600) contains identity, names, settings, scenes,
+saved assignments, source definitions, membership and trust keys, password hashes
+and remembered sessions. It is **not encrypted**: keep it in private storage and
+use encrypted transport/storage when copying it. Checksums detect damage, not
+malicious changes; restore only archives you trust.
+
+Restore checks the archive format, file list, size, checksums, SQLite schemas,
+node identity and existing infrastructure ownership before asking you to type
+`RESTORE` in an interactive terminal. It saves a protected pre-restore backup,
+replaces persistent configuration, restarts FH writers and verifies application
+health. If replacement/startup fails, it reinstates the previous configuration.
+Audio provisioning then reconciles only FH-owned components automatically.
+Restoring saved assignments can resume playback.
+
+Archives restore configuration on the **same installed node** with the same
+infrastructure ownership. They do not clone a node onto another machine or
+restore audio files, OS packages, unrelated Snapcast configuration, Bluetooth
+stack pairing secrets or external services. Back up the music folder separately.
+For a managed system back up every node: restoring a coordinator does not roll
+back the other nodes, and membership changes since backup may require explicit
+re-enrollment. Restoring an old credential store also restores its saved password
+and sessions; use `sudo flowharmonic password` afterward if they must be revoked.
+Do not power off during configuration replacement; the retained pre-restore
+archive supports repair if the process is interrupted.
+
+See [M9 acceptance evidence and repeatable checks](docs/M9-verification.md).

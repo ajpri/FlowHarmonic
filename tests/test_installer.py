@@ -101,7 +101,7 @@ class InstallerTests(unittest.TestCase):
         original = self.node()
         launcher = self.root / 'usr/local/bin/flowharmonic'
         self.assertTrue(os.access(launcher, os.X_OK))
-        self.assertEqual(subprocess.check_output([str(launcher), '--version'], env=self.env, cwd='/tmp', text=True).strip(), 'FlowHarmonic M6')
+        self.assertEqual(subprocess.check_output([str(launcher), '--version'], env=self.env, cwd='/tmp', text=True).strip(), 'FlowHarmonic M9')
         self.assertIn('Examples:', subprocess.check_output([str(launcher)], env=self.env, cwd='/tmp', text=True))
         self.assertIn('Identity:', subprocess.check_output([str(launcher), 'status'], env=self.env, cwd='/tmp', text=True))
         legacy_key = self.root / 'var/lib/flowharmonic/control.key'

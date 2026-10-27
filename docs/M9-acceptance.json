@@ -1,0 +1,60 @@
+{
+  "milestone": "M9",
+  "date_local": "2026-10-26",
+  "test_platforms": [
+    "Ubuntu 22.04 x86_64",
+    "Fedora 42 x86_64 (SELinux Enforcing)"
+  ],
+  "automated": {
+    "total": 130,
+    "passed": 129,
+    "skipped": 1,
+    "skip": "Native ffmpeg missing locally; all 11 source tests, including decoder test, passed on each VM",
+    "real_snapcast_compatibility": "passed",
+    "native_backup_tests_per_vm": 4,
+    "native_source_tests_per_vm": 11,
+    "javascript": [
+      "dashboard regression passed",
+      "scene selection/save/apply/remove/partial failure/member guidance/reconnection passed"
+    ]
+  },
+  "native_acceptance": {
+    "web_scene_save_and_restore": true,
+    "two_zone_source_and_independent_volume": true,
+    "standalone_mute_restore": true,
+    "fh_crash_recovery": true,
+    "owned_audio_server_crash_recovery": true,
+    "saved_intent_restored_after_underlying_settings_lost": true,
+    "fedora_reboot": true,
+    "disconnected_client_last_known_settings": true,
+    "ubuntu_and_fedora_backup_restore": true,
+    "safe_reinstall_both_vms": true,
+    "identity_and_browser_session_retention": true
+  },
+  "pcm_after_recovery": {
+    "rate": 44100,
+    "ubuntu": {
+      "peak": 394,
+      "amplitude_440": 147.914,
+      "amplitude_880": 0.074
+    },
+    "fedora": {
+      "peak": 302,
+      "amplitude_440": 107.561,
+      "amplitude_880": 0.069
+    }
+  },
+  "cleanup": {
+    "vm_destinations": "local Silence",
+    "temporary_test_membership": "removed",
+    "temporary_M9_scenes": "removed",
+    "pc_destination": "unchanged"
+  },
+  "limits": [
+    "same installed node/unchanged ownership for configuration restore",
+    "archives protected, not encrypted or signed",
+    "multi-destination scene application is not atomic",
+    "sudden power loss during multi-file restore not fault-injection tested",
+    "VM-only sound/device verification; M8 Bluetooth A2DP gap remains"
+  ]
+}

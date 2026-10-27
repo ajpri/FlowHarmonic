@@ -17,6 +17,14 @@ def local_inventory(inventory, node_id, endpoint):
             return inventory
         inventory['local_message'] = status.get('message', '')
         desktop_inventory(inventory, status.get('desktop', {}))
+        from .sources import read_status
+        for row in status.get('sources',[]):
+            source=next((s for s in inventory['sources'] if s['id']==row['id']),None)
+            if source is None:
+                source={'id':row['id'],'name':row['name'],'status':'disabled'}
+                inventory['sources'].append(source)
+            observed=read_status('/run/flowharmonic-source-'+row['id'].removeprefix('fh-source-')+'/status.json')
+            source.update(name=row['name'],status='playing' if observed.get('available') and row['state']!='stopped' else 'disabled',message=observed.get('message','Unavailable.'))
         observed = {row['id']: row for row in inventory['destinations']}
         for row in status.get('destinations', []):
             if row['id'] in observed:

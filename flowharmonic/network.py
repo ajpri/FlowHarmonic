@@ -1,4 +1,4 @@
-"""M6 membership only: approved enrollment and signed node messages, no audio control."""
+"""Approved membership and authenticated node messages."""
 import base64
 import fcntl
 import hashlib
@@ -23,7 +23,7 @@ from . import VERSION
 from .state import database, identity, node_name, validate_name
 
 WINDOW = 600
-MAX_MESSAGE = 16384
+MAX_MESSAGE = 262144
 
 
 class MembershipLock:
@@ -375,7 +375,7 @@ class Membership:
                 db.execute('DELETE FROM peer')
                 db.execute('DELETE FROM pending')
         result = self.view()
-        result['message'] = warning or 'This node is independent. Local audio settings are unchanged.'
+        result['message'] = warning or 'This node is independent. Standalone audio settings are retained; coordinated routes end and FH-owned players return to the local server.'
         return result
 
     def remove(self, peer_id):
@@ -385,7 +385,7 @@ class Membership:
             db.execute('DELETE FROM peer WHERE identity=?', (peer_id,))
         return self.view()
 
-    def receive(self, message):
+    def receive(self, message, remote='127.0.0.1'):
         # Bound unauthenticated work and pending-request storage globally.
         with self.failure_lock:
             now = time.monotonic()
@@ -397,6 +397,21 @@ class Membership:
         action = message['action']
         sender = message['sender']
         key = message['public_key']
+        if action.startswith('coord.'):
+            with self.lock, database(self.path) as db:
+                membership = self.current(db)
+                peer = db.execute('SELECT public_key,enrollment FROM peer WHERE identity=?',(sender,)).fetchone()
+                member = bool(self.host(membership) and membership['id']==message['system'] and peer and
+                              peer[0]==key and peer[1]==payload.get('enrollment'))
+                host = bool(membership and not self.host(membership) and membership['id']==message['system'] and
+                            membership['host_id']==sender and membership['host_key']==key and membership['enrollment']==payload.get('enrollment'))
+            if not ((member and action in ('coord.report','coord.command')) or (host and action=='coord.control')):
+                raise NetworkError('This operation requires current, approved coordinator membership.',403)
+            handler = getattr(self,'coordinator_handler',None)
+            if handler is None:
+                raise NetworkError('Update this node to M7 to use central audio control.',409)
+            result = handler(action,payload,sender,remote)
+            return self.sign(sender,message['system'],action,result,message['nonce'])
         with self.lock, database(self.path) as db:
             db.execute('BEGIN IMMEDIATE')
             self.cleanup(db)

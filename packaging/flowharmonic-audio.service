@@ -7,7 +7,7 @@ After=flowharmonic.service sound.target network.target
 Type=oneshot
 StateDirectory=flowharmonic-audio
 StateDirectoryMode=0755
-RuntimeDirectory=flowharmonic-desktop
+RuntimeDirectory=flowharmonic-desktop flowharmonic-sources
 RuntimeDirectoryMode=0755
 RuntimeDirectoryPreserve=yes
 User=root
@@ -18,9 +18,10 @@ Environment=PYTHONDONTWRITEBYTECODE=1
 TimeoutStartSec=90
 NoNewPrivileges=true
 ProtectSystem=strict
-ProtectHome=true
+ProtectHome=tmpfs
+BindReadOnlyPaths=-/run/user
 PrivateTmp=true
-ReadWritePaths=/etc/flowharmonic /etc/systemd/system /var/lib/flowharmonic-audio /run/flowharmonic-desktop
+ReadWritePaths=/etc/flowharmonic /etc/systemd/system /var/lib/flowharmonic-audio /run/flowharmonic-desktop /run/flowharmonic-sources
 # Desktop capture runs unprivileged and is bound to its local login session.
 # Debian package units also synchronize their legacy SysV startup links.
 ReadWritePaths=-/etc/rc0.d -/etc/rc1.d -/etc/rc2.d -/etc/rc3.d -/etc/rc4.d -/etc/rc5.d -/etc/rc6.d -/etc/rcS.d

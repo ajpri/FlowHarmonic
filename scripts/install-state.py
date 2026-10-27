@@ -21,7 +21,7 @@ def record_ownership(path, server, client):
     print(data['server'], data['client'])
 
 
-def backup(database, destination, identity_database=True, network_database=False):
+def backup(database, destination, identity_database=True, network_database=False, coordination_database=False, sources_database=False, scenes_database=False):
     path = Path(database)
     if not path.exists():
         print('')
@@ -34,7 +34,15 @@ def backup(database, destination, identity_database=True, network_database=False
         if source.execute('PRAGMA quick_check').fetchone()[0] != 'ok':
             raise RuntimeError('Database integrity check failed')
         identity = ''
-        if network_database:
+        if scenes_database:
+            source.execute('SELECT id,scope,name,data FROM scene LIMIT 0')
+            source.execute('SELECT destination,data FROM assignment LIMIT 0')
+        elif sources_database:
+            source.execute('SELECT id,data FROM source LIMIT 0');source.execute('SELECT id,data FROM bluetooth LIMIT 0')
+        elif coordination_database:
+            for table, fields in [('visibility','source,visible'),('node','id,data'),('route','destination,data'),('playback','destination,data')]:
+                source.execute(f'SELECT {fields} FROM {table} LIMIT 0')
+        elif network_database:
             source.execute('SELECT private_key, membership, accepting FROM settings LIMIT 0')
             source.execute('SELECT identity, public_key, name, enrollment FROM peer LIMIT 0')
         elif identity_database:
@@ -59,5 +67,11 @@ if __name__ == '__main__':
         backup(*sys.argv[2:], identity_database=False)
     elif sys.argv[1] == 'backup-network':
         backup(*sys.argv[2:], network_database=True)
+    elif sys.argv[1] == 'backup-coordination':
+        backup(*sys.argv[2:],coordination_database=True)
+    elif sys.argv[1] == 'backup-sources':
+        backup(*sys.argv[2:],sources_database=True)
+    elif sys.argv[1] == 'backup-scenes':
+        backup(*sys.argv[2:],scenes_database=True)
     else:
         raise SystemExit('Unknown installer state command')

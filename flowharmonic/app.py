@@ -1,6 +1,7 @@
 """FlowHarmonic dashboard and destination controls."""
 import asyncio
 import json
+import os
 import sqlite3
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -20,6 +21,9 @@ from .state import identity, initialize, node_name, set_node_name, validate_name
 from .diagnostics import report as diagnostics_report
 from .discovery import Discovery
 from .network import MAX_MESSAGE, Membership, NetworkError
+from .coordination import Coordination
+from .sources import Sources, read_status, tracks
+import uuid
 
 STATIC = Path(__file__).parent / 'static'
 BUILD_FILE = Path(__file__).resolve().parent.parent / 'BUILD'
@@ -68,20 +72,35 @@ class AllowJoining(BaseModel):
     enabled: StrictBool
 
 
+class SourceVisibility(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    source_id: StrictStr = Field(min_length=1,max_length=1100)
+    visible: StrictBool
+
+
+class SceneSave(NameChange):
+    destinations: list[StrictStr] = Field(min_length=1, max_length=128)
+
+
 def create_app():
     @asynccontextmanager
     async def lifespan(app):
         app.state.config = load_config()
         app.state.database = initialize(data_directory())
         app.state.authentication = Authentication(data_directory())
+        app.state.sources = Sources(data_directory())
         app.state.cookie_name = 'fh_session_' + identity(app.state.database).replace('-', '')[:12]
         app.state.audio = Snapcast(app.state.config['snapcast_url'])
         app.state.membership = Membership(data_directory(), app.state.config, app.state.database)
+        app.state.coordination = Coordination(app.state.membership, audio_snapshot, app.state.audio)
+        app.state.membership.coordinator_handler = app.state.coordination.receive
+        app.state.coordination.start()
         app.state.discovery = Discovery(app.state.membership, app.state.config)
         app.state.discovery.start()
         try:
             yield
         finally:
+            await asyncio.to_thread(app.state.coordination.close)
             await asyncio.to_thread(app.state.discovery.close)
 
     app = FastAPI(title='FlowHarmonic', version=VERSION, lifespan=lifespan,
@@ -168,6 +187,8 @@ def create_app():
     @app.get('/api/diagnostics', dependencies=[Depends(require_sign_in)])
     def diagnostics():
         result = diagnostics_report(app.state.config, app.state.database, app.state.audio, BUILD)
+        if app.state.coordination.last_error:
+            result['checks'].append({'name': 'Routing recovery', 'state': 'unavailable', 'detail': app.state.coordination.last_error})
         result['checks'].append({'name': 'Node discovery', 'state': 'info', 'detail': app.state.discovery.snapshot()['message']})
         return result
 
@@ -227,7 +248,7 @@ def create_app():
             message = json.loads(raw)
         except ValueError:
             raise HTTPException(422, 'This node message is unreadable.')
-        return await asyncio.to_thread(app.state.membership.receive, message)
+        return await asyncio.to_thread(app.state.membership.receive, message, request.client.host)
 
     def local_view(inventory):
         return local_inventory(inventory, identity(app.state.database), app.state.config['snapcast_url'])
@@ -237,15 +258,79 @@ def create_app():
 
     @app.get('/api/audio', dependencies=[Depends(require_sign_in)])
     def audio():
+        return app.state.coordination.dashboard()
+
+    @app.get('/api/scenes', dependencies=[Depends(require_sign_in)])
+    def scenes():
+        return app.state.coordination.scenes.view()
+
+    @app.post('/api/scenes', dependencies=[Depends(authorize)])
+    def save_scene(change: SceneSave):
+        return app.state.coordination.scenes.save(change.name, change.destinations)
+
+    @app.post('/api/scenes/{scene}/apply', dependencies=[Depends(authorize)])
+    def apply_scene(scene: str):
+        return app.state.coordination.scenes.apply(scene)
+
+    @app.post('/api/scenes/{scene}/remove', dependencies=[Depends(authorize)])
+    def remove_scene(scene: str):
+        return app.state.coordination.scenes.remove(scene)
+
+    @app.get('/api/source-setup', dependencies=[Depends(require_sign_in)])
+    def source_setup():
+        path=Path(os.environ.get('FLOWHARMONIC_CONFIG','/etc/flowharmonic/config.toml'))
+        try:provisioned=json.loads((path.parent/'local-audio.json').read_text())
+        except (OSError,ValueError):provisioned={}
+        rows=app.state.sources.rows()
+        for row in rows:
+            row['observed']=read_status('/run/flowharmonic-source-'+row['id']+'/status.json')
+        return {'sources':rows,'inputs':provisioned.get('inputs',[]),
+                'message':provisioned.get('message',''),
+                'bluetooth':read_status('/run/flowharmonic-bluetooth/status.json')}
+
+    @app.post('/api/source-setup/save', dependencies=[Depends(authorize)])
+    def save_source(change: dict):
+        try:
+            if 'id' not in change:change['id']=str(uuid.uuid4())
+            return app.state.sources.save(change)
+        except (ValueError,KeyError,TypeError) as error:raise HTTPException(422,str(error))
+
+    @app.post('/api/source-setup/remove', dependencies=[Depends(authorize)])
+    def remove_source(change: dict):
+        try:
+            if set(change)!={'id'}:raise ValueError('Choose a configured source.')
+            return app.state.sources.remove(change['id'])
+        except (ValueError,KeyError,TypeError,AttributeError) as error:raise HTTPException(422,'Choose a configured source.')
+
+    @app.post('/api/source-setup/tracks', dependencies=[Depends(authorize)])
+    def music_tracks(change: dict):
+        try:
+            if set(change)!={'folder'} or not isinstance(change['folder'],str) or not Path(change['folder']).is_absolute():raise ValueError('Choose an absolute local music folder.')
+            return {'tracks':tracks(change['folder'])}
+        except (OSError,ValueError,TypeError):raise HTTPException(422,'Cannot read this music folder. Choose a readable local folder with at most 2,000 supported tracks and 20,000 files.')
+
+    @app.post('/api/source-setup/bluetooth', dependencies=[Depends(authorize)])
+    def bluetooth_action(change: dict):
+        try:
+            app.state.sources.bluetooth(change)
+            return {'saved':True}
+        except (ValueError,TypeError):raise HTTPException(422,'Choose a Bluetooth device or confirm the current pairing request.')
+
+    @app.get('/api/local/audio', dependencies=[Depends(require_sign_in)])
+    def local_audio():
         return audio_snapshot()
+
+    @app.post('/api/source-visibility', dependencies=[Depends(authorize)])
+    def visibility(change: SourceVisibility):
+        return app.state.coordination.set_visibility(change.source_id,change.visible)
 
     @app.get('/api/sources', dependencies=[Depends(require_sign_in)])
     def sources():
-        return {'sources': audio_snapshot()['sources']}
+        return {'sources': audio()['sources']}
 
     @app.get('/api/destinations', dependencies=[Depends(require_sign_in)])
     def destinations():
-        return {'destinations': audio_snapshot()['destinations']}
+        return {'destinations': audio()['destinations']}
 
     @app.get('/api/auth')
     def authentication_status(request: Request):
@@ -279,17 +364,17 @@ def create_app():
             source = next((s for s in audio_snapshot()['sources'] if s['id'] == change.source_id), None)
             if source and source['status'] == 'disabled':
                 raise HTTPException(409, source.get('message', 'Desktop audio is unavailable.'))
-        return local_view(app.state.audio.change(destination, source_id=change.source_id))
+        return app.state.coordination.change(destination,{'source_id':change.source_id})
 
     @app.post('/api/destinations/{destination:path}/volume', dependencies=[Depends(authorize)])
     def volume(destination: str, change: VolumeChange):
         if change.percent is None and change.muted is None:
             raise HTTPException(422, 'Choose a volume or mute setting.')
-        return local_view(app.state.audio.change(destination, percent=change.percent, muted=change.muted))
+        return app.state.coordination.change(destination,{k:v for k,v in change.model_dump().items() if v is not None})
 
     @app.post('/api/destinations/{destination:path}/name', dependencies=[Depends(authorize)])
     def rename(destination: str, change: NameChange):
-        return local_view(app.state.audio.rename(destination, change.name))
+        return app.state.coordination.change(destination,{'name':change.name})
 
     @app.get('/')
     def dashboard(request: Request):

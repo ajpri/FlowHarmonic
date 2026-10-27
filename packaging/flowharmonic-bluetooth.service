@@ -1,0 +1,22 @@
+# Managed by FlowHarmonic Bluetooth
+[Unit]
+Description=FlowHarmonic Bluetooth pairing window
+After=bluetooth.service flowharmonic.service
+Wants=bluetooth.service
+[Service]
+User=root
+SupplementaryGroups=flowharmonic
+WorkingDirectory=/opt/flowharmonic/current
+ExecStart=/opt/flowharmonic/current/.venv/bin/python -m flowharmonic.bluetooth
+RuntimeDirectory=flowharmonic-bluetooth
+RuntimeDirectoryMode=0755
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX
+UMask=0022
+[Install]
+WantedBy=multi-user.target

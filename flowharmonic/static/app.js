@@ -77,6 +77,32 @@ function updateDisabled() {
 function render() {
   const sources = document.getElementById("sources");
   document.getElementById("local-status").textContent = inventory.local_message || "";
+  document.getElementById("system-status").textContent = inventory.system_message || "";
+  const nodes = document.getElementById("system-nodes");
+  nodes.replaceChildren();
+  for (const node of inventory.nodes || []) nodes.append(element("p", `${node.name}: ${node.available ? "Connected" : "Disconnected"}`));
+  const visibility = document.getElementById("source-visibility");
+  if (!visibility.contains(document.activeElement)) {
+    visibility.replaceChildren();
+    for (const source of inventory.all_sources || inventory.sources) {
+      const label = element("label");
+      const check = element("input");
+      check.type = "checkbox";
+      check.checked = source.visible !== false;
+      check.setAttribute("aria-label", `Show ${source.node_name ? source.node_name + " / " : ""}${source.name}`);
+      check.addEventListener("change", async () => {
+        check.disabled = true;
+        try {
+          await request("/api/source-visibility", {source_id: source.id, visible: check.checked});
+          notice.textContent = "Source visibility saved. Existing playback continues.";
+          await refresh();
+        } catch (problem) { check.checked = !check.checked; showError(problem.message); }
+        finally { check.disabled = false; }
+      });
+      label.append(check, element("span", ` ${source.node_name ? source.node_name + " / " : ""}${source.name}`));
+      visibility.append(label);
+    }
+  }
   sources.replaceChildren();
   destinations.replaceChildren();
   document.getElementById("source-count").textContent = String(inventory.sources.length);
@@ -84,7 +110,7 @@ function render() {
   if (!inventory.sources.length) sources.append(element("p", "No sources available.", "empty"));
   for (const source of inventory.sources) {
     const row = element("div", undefined, "audio-row");
-    row.append(element("strong", source.name), element("span", source.status === "playing" ? "Playing" : source.status === "idle" ? "Idle" : "Unavailable", "availability"));
+    row.append(element("strong", source.node_name ? `${source.node_name} / ${source.name}` : source.name), element("span", source.status === "playing" ? "Playing" : source.status === "idle" ? "Idle" : "Unavailable", "availability"));
     if (source.message) row.append(element("p", source.message, "availability-note"));
     sources.append(row);
   }
@@ -92,23 +118,25 @@ function render() {
   for (const destination of inventory.destinations) {
     const row = element("div", undefined, "audio-row");
     row.append(element("strong", destination.name), element("span", destination.available ? "Online" : "Offline", "availability"));
+    if (destination.pending || destination.playback_available === false) row.append(element("p", destination.message || "Connecting to the selected source…", "availability-note"));
     const sourceLabel = element("label", "Source");
     sourceLabel.hidden = !inventory.sources.some(source => source.status !== "disabled");
     const select = element("select");
     select.setAttribute("aria-label", `Source for ${destination.name}`);
     if (!inventory.sources.some(source => source.id === destination.source_id)) {
-      const option = element("option", "No source available");
-      option.value = "";
+      const current = (inventory.all_sources || []).find(source => source.id === destination.source_id);
+      const option = element("option", current ? `${current.name} (hidden)` : "No source available");
+      option.value = destination.source_id || "";
       option.disabled = true;
       select.append(option);
     }
     for (const source of inventory.sources) {
-      const option = element("option", source.name);
+      const option = element("option", source.node_name ? `${source.node_name} / ${source.name}` : source.name);
       option.value = source.id;
       option.disabled = source.status === "disabled";
       select.append(option);
     }
-    select.value = inventory.sources.some(source => source.id === destination.source_id) ? destination.source_id : "";
+    select.value = destination.source_id || "";
     select.addEventListener("change", () => change(destination, "source", {source_id: select.value}));
     sourceLabel.append(select);
     const volumeLabel = element("label", "Volume");
@@ -134,7 +162,7 @@ function render() {
     controls.append(sourceLabel, volumeLabel, mute);
     if (sourceLabel.hidden) controls.append(element("p", "No sources available.", "availability-note"));
     const summary = element("p", undefined, "playback-summary");
-    const sourceName = inventory.sources.find(source => source.id === destination.source_id)?.name || "No source available";
+    const sourceName = (inventory.all_sources || inventory.sources).find(source => source.id === destination.source_id)?.name || "No source available";
     summary.dataset.settings = `${sourceName} · Volume ${destination.volume}% · ${destination.muted ? "Muted" : "Unmuted"}`;
     summary.dataset.offline = String(!destination.available);
     const reason = element("p", undefined, "destination-reason");
@@ -193,7 +221,7 @@ async function change(destination, action, body) {
     inventory = await request(`/api/destinations/${encodeURIComponent(destination.id)}/${action}`, body);
     error.hidden = true;
     retry.hidden = true;
-    notice.textContent = "Saved.";
+    notice.textContent = inventory.destinations.some(row => row.pending) ? "Connecting to the selected source…" : "Saved.";
   } catch (problem) {
     notice.textContent = "";
     showError(problem.message || "The change could not be confirmed. Refresh before trying again.");
@@ -224,9 +252,10 @@ async function refresh() {
     const availabilityChanged = sourceAvailabilityChanged || observed.destinations.length !== inventory.destinations.length ||
       observed.destinations.some(destination => inventory.destinations.find(old => old.id === destination.id)?.available !== destination.available);
     inventory = observed;
-    online = true;
-    connection.textContent = "Audio connected";
-    connection.className = "online";
+    if (typeof updateSceneDestinations === 'function' && document.getElementById('scenes').open && !sceneBusy) updateSceneDestinations(observed, true);
+    online = observed.audio_available !== false;
+    connection.textContent = online ? "Audio connected" : "Audio unavailable";
+    connection.className = online ? "online" : "offline";
     error.hidden = true;
     retry.hidden = true;
     if (availabilityChanged || !destinations.contains(document.activeElement)) render();

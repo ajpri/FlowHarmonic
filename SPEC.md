@@ -533,6 +533,9 @@ Filesystem layout:
     flowharmonic.db
     authentication.db
     network.db
+    coordination.db
+    sources.db
+    scenes.db
     identity/
     backups/
 /usr/local/bin/flowharmonic

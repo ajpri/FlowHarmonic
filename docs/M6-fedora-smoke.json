@@ -1,0 +1,24 @@
+{
+  "source_commit": "b9d2aaa31484f1c8eb3c822daa7b2bdf4bde4393",
+  "fedora_release": "Fedora release 43 (Forty Three)",
+  "selinux": "Enforcing",
+  "fedora_identity": "3ead16b8-d2d0-47be-9ebc-88bcbf85ce50",
+  "clean_install": true,
+  "discovery_ubuntu_sees_fedora": true,
+  "discovery_fedora_sees_ubuntu": true,
+  "two_sided_enrollment": true,
+  "authenticated_communication": true,
+  "service_restart_persistence": true,
+  "authenticated_dashboard_and_apis": true,
+  "reinstall_persistence": true,
+  "reboot_persistence": true,
+  "selinux_after_reboot": "Enforcing",
+  "code_changes_needed": false,
+  "fedora_stopped": true,
+  "ubuntu_restored_independent": true,
+  "limits": [
+    "Fedora 43 Cloud x86_64 smoke test only; no Fedora desktop audio or full distribution matrix.",
+    "Cloud image firewalld was inactive; an active firewalld policy was not tested.",
+    "mDNS detected both nodes; joining used the explicit private test-LAN address because the guests had identical NAT addresses."
+  ]
+}

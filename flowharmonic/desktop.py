@@ -64,7 +64,7 @@ def save_status(path, available, message, **extra):
     temporary.replace(path)
 
 
-def capture(fifo, status, snapclient=None, client_id=None, port=1704):
+def capture(fifo, status, snapclient=None, client_id=None, port=1704, host='127.0.0.1'):
     running = True
     recorder = player = None
     def stop(*_):
@@ -118,7 +118,7 @@ def capture(fifo, status, snapclient=None, client_id=None, port=1704):
                 run('pw-link', str(output), str(input_), check=False)
             pulse = Path(os.environ['XDG_RUNTIME_DIR']) / 'pulse/native'
             if snapclient and pulse.exists() and (player is None or player.poll() is not None):
-                player = subprocess.Popen([snapclient, '--host', '127.0.0.1', '--port', str(port),
+                player = subprocess.Popen([snapclient, '--host', host, '--port', str(port),
                                            '--hostID', client_id, '--player', 'pulse', '--mixer', 'software'],
                                           env={**os.environ, 'PULSE_SERVER': 'unix:' + str(pulse)})
             player_ready = player is not None and player.poll() is None
@@ -154,8 +154,9 @@ def main():
     parser.add_argument('--snapclient')
     parser.add_argument('--client-id')
     parser.add_argument('--port', type=int, default=1704)
+    parser.add_argument('--host',default='127.0.0.1')
     args = parser.parse_args()
-    raise SystemExit(capture(args.fifo, args.status, args.snapclient, args.client_id, args.port))
+    raise SystemExit(capture(args.fifo, args.status, args.snapclient, args.client_id, args.port,args.host))
 
 
 if __name__ == '__main__':

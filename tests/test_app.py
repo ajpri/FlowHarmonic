@@ -93,12 +93,55 @@ class ApplicationTests(unittest.TestCase):
                 self.assertIn('Log in', response.json()['detail'])
                 change.assert_not_called()
 
+    def test_source_setup_authentication_validation_and_persistence(self):
+        with TestClient(create_app()) as client:
+            self.assertEqual(client.get('/api/source-setup').status_code,401)
+            self.assertEqual(client.post('/api/source-setup/save',json={}).status_code,401)
+            self.sign_in(client)
+            headers={'X-FlowHarmonic-Request':'1'}
+            source={'name':'USB input','kind':'input','device':'alsa:stable','channels':[1],'state':'stopped'}
+            self.assertEqual(client.post('/api/source-setup/save',json=source).status_code,403)
+            response=client.post('/api/source-setup/save',json=source,headers=headers)
+            self.assertEqual(response.status_code,200);identifier=response.json()['id']
+            rows=client.get('/api/source-setup').json()['sources']
+            self.assertEqual(rows[0]['id'],identifier);self.assertEqual(rows[0]['state'],'stopped')
+            self.assertEqual(client.post('/api/source-setup/save',json={**source,'channels':[True]},headers=headers).status_code,422)
+            self.assertEqual(client.post('/api/source-setup/bluetooth',json={'action':'connect','device':'x; reboot'},headers=headers).status_code,422)
+            cookies=dict(client.cookies)
+        with TestClient(create_app()) as client:
+            client.cookies.update(cookies)
+            self.assertEqual(client.get('/api/source-setup').json()['sources'][0]['id'],identifier)
+            self.assertEqual(client.post('/api/source-setup/remove',json={'id':identifier},headers=headers).status_code,200)
+            self.assertEqual(client.get('/api/source-setup').json()['sources'],[])
+
+    def test_scene_routes_require_authentication_and_remember_settings(self):
+        import copy
+        inventory = {'sources':[{'id':'Silence','name':'Silence','status':'playing'}],
+                     'destinations':[{'id':'desk','name':'Desk','source_id':'Silence','volume':37,'muted':True,'available':True}]}
+        with TestClient(create_app()) as client:
+            self.assertEqual(client.get('/api/scenes').status_code,401)
+            self.assertEqual(client.post('/api/scenes',json={}).status_code,401)
+            self.sign_in(client)
+            data = {'name':'Evening', 'destinations':['desk']}
+            self.assertEqual(client.post('/api/scenes',json=data).status_code,403)
+            headers = {'X-FlowHarmonic-Request':'1'}
+            with patch.object(client.app.state.audio,'snapshot',return_value=copy.deepcopy(inventory)):
+                response = client.post('/api/scenes',json=data,headers=headers)
+                self.assertEqual(response.status_code,200)
+                key = response.json()['id']
+                self.assertEqual(client.get('/api/scenes').json()['scenes'][0]['destinations'][0]['volume'],37)
+                with patch.object(client.app.state.audio,'change',return_value=inventory):
+                    applied = client.post('/api/scenes/'+key+'/apply',json={},headers=headers)
+                self.assertTrue(applied.json()['results'][0]['applied'])
+                self.assertEqual(client.post('/api/scenes/'+key+'/remove',json={},headers=headers).status_code,200)
+                self.assertEqual(client.get('/api/scenes').json()['scenes'],[])
+
     def test_dashboard_and_api(self):
         with TestClient(create_app()) as client:
             health = client.get('/health')
             self.assertEqual(health.status_code, 200)
             self.assertEqual(health.json()['status'], 'ok')
-            self.assertEqual(health.json()['version'], 'M6')
+            self.assertEqual(health.json()['version'], 'M9')
             self.assertEqual(client.get('/', follow_redirects=False).headers['location'], '/sign-in')
             self.assertEqual(client.get('/api/node').status_code, 401)
             self.sign_in(client)
@@ -274,14 +317,14 @@ class ApplicationTests(unittest.TestCase):
         with TestClient(create_app()) as client:
             self.sign_in(client)
             with patch.object(client.app.state.audio, 'snapshot', side_effect=AudioError('Cannot reach the audio server.')):
-                self.assertEqual(client.get('/api/audio').status_code, 503)
-                self.assertIn('Cannot reach', client.get('/api/audio').json()['detail'])
+                self.assertEqual(client.get('/api/audio').status_code, 200)
+                self.assertIn('Cannot reach', client.get('/api/audio').json()['local_message'])
                 self.assertEqual(client.get('/health').status_code, 200)
                 self.assertEqual(client.get('/').status_code, 200)
 
     def test_cli_version(self):
         output = subprocess.check_output([sys.executable, '-m', 'flowharmonic', '--version'], text=True)
-        self.assertEqual(output.strip(), 'FlowHarmonic M6')
+        self.assertEqual(output.strip(), 'FlowHarmonic M9')
 
     def test_command_line_password_change_revokes_all_browsers(self):
         with TestClient(create_app()) as client:

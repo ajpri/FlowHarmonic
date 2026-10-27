@@ -37,10 +37,10 @@ main() {
     trap 'exit 143' TERM
 
     if [[ $ID == fedora ]]; then
-        dnf install -y python3 python3-pip curl ca-certificates tar gzip shadow-utils alsa-utils pipewire-utils pipewire-gstreamer gstreamer1
+        dnf install -y python3 python3-pip curl ca-certificates tar gzip shadow-utils alsa-utils pipewire-utils pipewire-gstreamer gstreamer1 bluez wireplumber pipewire-libs ffmpeg-free
     else
         apt-get update
-        DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-venv curl ca-certificates tar gzip alsa-utils pipewire-bin gstreamer1.0-tools gstreamer1.0-pipewire
+        DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-venv curl ca-certificates tar gzip alsa-utils pipewire-bin gstreamer1.0-tools gstreamer1.0-pipewire bluez wireplumber libspa-0.2-bluetooth ffmpeg
     fi
     source "$SOURCE/scripts/audio-drivers.sh"
     install_audio_drivers
@@ -84,7 +84,7 @@ main() {
     fi
 
     # Each attempt gets a distinct path. venv paths must never move after creation.
-    build="M6-$(date -u +%Y%m%dT%H%M%SZ)-$(basename "$work" | cut -d. -f2)"
+    build="M9-$(date -u +%Y%m%dT%H%M%SZ)-$(basename "$work" | cut -d. -f2)"
     release="/opt/flowharmonic/releases/$build"
     install -d -m 0755 "$release"
     cp -R "$SOURCE/flowharmonic" "$release/"
@@ -145,6 +145,18 @@ PY
         python3 "$SOURCE/scripts/install-state.py" backup-network \
             /var/lib/flowharmonic/network.db "$backup_dir/network.db"
     fi
+    if [[ -f /var/lib/flowharmonic/coordination.db ]]; then
+        python3 "$SOURCE/scripts/install-state.py" backup-coordination \
+            /var/lib/flowharmonic/coordination.db "$backup_dir/coordination.db"
+    fi
+    if [[ -f /var/lib/flowharmonic/sources.db ]]; then
+        python3 "$SOURCE/scripts/install-state.py" backup-sources \
+            /var/lib/flowharmonic/sources.db "$backup_dir/sources.db"
+    fi
+    if [[ -f /var/lib/flowharmonic/scenes.db ]]; then
+        python3 "$SOURCE/scripts/install-state.py" backup-scenes \
+            /var/lib/flowharmonic/scenes.db "$backup_dir/scenes.db"
+    fi
     expected_identity=$(python3 "$SOURCE/scripts/install-state.py" backup \
         /var/lib/flowharmonic/flowharmonic.db "$backup_dir/flowharmonic.db")
     atomic_link "$release" /opt/flowharmonic/current
@@ -160,7 +172,7 @@ PY
     rollback_needed=0
     install -d -m 0755 /usr/local/bin
     install -m 0755 "$SOURCE/packaging/flowharmonic" /usr/local/bin/flowharmonic
-    # Audio provisioning runs only after the M6 application has passed activation.
+    # Audio provisioning runs only after the M9 application has passed activation.
     # A failed hardware/service setup leaves the working dashboard available.
     install -m 0644 "$SOURCE/packaging/flowharmonic-audio.service" /etc/systemd/system/flowharmonic-audio.service
     install -m 0644 "$SOURCE/packaging/flowharmonic-audio.timer" /etc/systemd/system/flowharmonic-audio.timer
@@ -169,11 +181,21 @@ PY
     fi
     systemctl daemon-reload
     systemctl enable flowharmonic-audio.service flowharmonic-audio.timer
+    if [[ -f /etc/systemd/system/flowharmonic-bluetooth.service ]] &&
+        ! grep -qxF '# Managed by FlowHarmonic Bluetooth' /etc/systemd/system/flowharmonic-bluetooth.service &&
+        ! grep -qxF 'Description=FlowHarmonic Bluetooth pairing window' /etc/systemd/system/flowharmonic-bluetooth.service; then
+        fail 'An unrelated Bluetooth service occupies the FH service name; it was retained.'
+    fi
+    install -m 0644 "$SOURCE/packaging/flowharmonic-bluetooth.service" /etc/systemd/system/flowharmonic-bluetooth.service
+    if command -v restorecon >/dev/null; then restorecon /etc/systemd/system/flowharmonic-bluetooth.service; fi
+    systemctl daemon-reload
+    systemctl enable flowharmonic-bluetooth.service
+    systemctl restart flowharmonic-bluetooth.service
     systemctl start flowharmonic-audio.timer
     systemctl start flowharmonic-audio.service || fail 'Application installed; local audio setup needs attention. The dashboard remains available and setup retries automatically. Inspect journalctl -u flowharmonic-audio.'
     (cd "$release" && "$release/.venv/bin/python" -m flowharmonic password --if-needed) ||
         printf 'Password setup was not completed. Run sudo flowharmonic password when ready.\n'
-    printf '\nFlowHarmonic M6 installed. Dashboard: %s/\n' "$health_url"
+    printf '\nFlowHarmonic M9 installed. Dashboard: %s/\n' "$health_url"
     printf 'Maintenance: flowharmonic status | sudo flowharmonic password | sudo flowharmonic logs | sudo flowharmonic restart\n'
     printf 'Your browser remembers sign-in across reloads and tabs. Use Sign out on shared devices.\n'
     printf 'Configuration and identity are preserved in /etc/flowharmonic and /var/lib/flowharmonic.\n'

@@ -27,7 +27,7 @@ wait_health() {
 import json, sys
 try:
     data = json.load(open(sys.argv[1]))
-    valid = data['status'] == 'ok' and data['version'] == 'M6' and data['build'] == sys.argv[2]
+    valid = data['status'] == 'ok' and data['version'] == 'M9' and data['build'] == sys.argv[2]
     valid = valid and (not sys.argv[3] or data['identity'] == sys.argv[3])
     sys.exit(0 if valid else 1)
 except (ValueError, KeyError):

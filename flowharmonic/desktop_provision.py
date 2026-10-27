@@ -72,9 +72,11 @@ def start(provisioner, session, binary_dir, port):
     if path.exists() and not path.read_text().startswith(MARKER):
         raise RuntimeError('An unrelated service occupies the desktop capture service name; it was retained.')
     desktop = p.status['desktop']
+    from .playback_target import target
+    playback_host,playback_port=target(p.root,p.status['owner'],desktop['destination'],port)
     desktop['unit'] = unit
     # Record ownership before starting. Never touch a desktop's own services.
-    p.save()
+    p.save(progress=True)
     release = p.path('/opt/flowharmonic/current').resolve()
     text = f'''{MARKER}[Unit]
 Description=FlowHarmonic desktop audio session
@@ -87,7 +89,7 @@ WorkingDirectory=/opt/flowharmonic/current
 Environment=XDG_RUNTIME_DIR=/run/user/{uid}
 Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{uid}/bus
 Environment=PYTHONDONTWRITEBYTECODE=1
-ExecStart={unit_quote(release / ".venv/bin/python")} -m flowharmonic.desktop --fifo /run/flowharmonic-desktop/audio.pcm --status {desktop['status']} --snapclient {unit_quote(binary_dir / 'snapclient')} --client-id {desktop['destination']} --port {port}
+ExecStart={unit_quote(release / ".venv/bin/python")} -m flowharmonic.desktop --fifo /run/flowharmonic-desktop/audio.pcm --status {desktop['status']} --snapclient {unit_quote(binary_dir / 'snapclient')} --client-id {desktop['destination']} --host {playback_host} --port {playback_port}
 RuntimeDirectory=flowharmonic-desktop-{uid}
 RuntimeDirectoryMode=0755
 Restart=on-failure

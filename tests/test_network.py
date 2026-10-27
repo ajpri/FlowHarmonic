@@ -11,7 +11,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from flowharmonic.app import create_app
-from flowharmonic.network import Membership, NetworkError, code, endpoint, exchange
+from flowharmonic.network import MAX_MESSAGE, Membership, NetworkError, code, endpoint, exchange
 from flowharmonic.state import identity, initialize
 
 
@@ -194,7 +194,7 @@ class NetworkAPITests(unittest.TestCase):
                 self.assertEqual(client.post('/api/network/create', json={'name': 'House'}).status_code, 401)
                 info = client.get('/peer/info').json()
                 self.assertEqual(set(info), {'protocol', 'identity', 'name', 'version', 'public_key', 'system', 'accepting'})
-                self.assertEqual(client.post('/peer/message', content='x'*17000).status_code, 413)
+                self.assertEqual(client.post('/peer/message', content='x'*(MAX_MESSAGE+1)).status_code, 413)
                 self.assertEqual(client.post('/peer/message', json={}).status_code, 403)
                 self.assertEqual(client.post('/peer/message', content='bad').status_code, 422)
                 token = client.app.state.authentication

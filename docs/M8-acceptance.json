@@ -1,0 +1,189 @@
+{
+  "milestone": "M8",
+  "date": "2026-10-26",
+  "scope": "VM-only validation requested by user; Bluetooth A2DP audio remains unverified.",
+  "source_preferences_before_final_reinstall": [
+    {
+      "name": "M8 acceptance music",
+      "kind": "music",
+      "state": "playing",
+      "folder": "/srv/fh-m8-acceptance",
+      "track": "second.wav",
+      "id": "0b8cbcc2-94b3-4fbd-b478-7228fed504e0",
+      "observed": {
+        "available": true,
+        "message": "Playing.",
+        "updated": 1793052276.0169725,
+        "state": "playing",
+        "track": "stereo.wav"
+      }
+    },
+    {
+      "name": "M8 acceptance input channel 2",
+      "kind": "input",
+      "state": "playing",
+      "device": "pw:alsa_input.platform-snd_aloop.0.analog-stereo",
+      "channels": [
+        2
+      ],
+      "id": "4c1749ac-2626-40eb-bb7e-9e24fdbd7571",
+      "observed": {
+        "available": true,
+        "message": "Playing.",
+        "updated": 1793052275.6470273,
+        "state": "playing",
+        "track": ""
+      }
+    },
+    {
+      "name": "M8 acceptance Bluetooth",
+      "kind": "bluetooth",
+      "state": "playing",
+      "device": "00:AA:01:01:00:01",
+      "id": "0e6fbc28-7296-4a98-93fb-e860605b69b3",
+      "observed": {
+        "available": false,
+        "message": "The configured input is disconnected or unavailable. It will retry when this device returns.",
+        "updated": 1793052275.966061,
+        "state": "unavailable",
+        "track": ""
+      }
+    }
+  ],
+  "node_identity": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+  "music_stereo_pcm": {
+    "rate": 44100,
+    "left": {
+      "440": 455.282,
+      "880": 0.004
+    },
+    "right": {
+      "440": 0.017,
+      "880": 637.145
+    }
+  },
+  "selected_input_channel_2_pcm": {
+    "rate": 44100,
+    "left": {
+      "440": 0.042,
+      "880": 60.058
+    },
+    "right": {
+      "440": 0.042,
+      "880": 60.058
+    }
+  },
+  "input_disconnect_reported_without_changing_device_or_enabled_state": true,
+  "input_returned_automatically": true,
+  "ui_music_play_pause_resume_stop_and_track_selection": true,
+  "bluetooth_explicit_matching_code_pairing": true,
+  "bluetooth_a2dp_audio_verified": false,
+  "normal_desktop_default_unchanged": true,
+  "source_creation_started_stopped_and_did_not_route_to_speakers": true,
+  "ui_method": "Shipped JavaScript DOM events against actual installed HTTP services; no visual browser assertion.",
+  "fedora": {
+    "version": "M8",
+    "selinux": "Enforcing",
+    "native_source_tests": 11,
+    "native_source_tests_passed": 11
+  },
+  "second_track_660_pcm": {
+    "rate": 44100,
+    "channel_amplitudes": {
+      "1": {
+        "440": 0.299,
+        "660": 412.248,
+        "880": 0.291
+      },
+      "2": {
+        "440": 0.299,
+        "660": 412.248,
+        "880": 0.291
+      }
+    }
+  },
+  "final_reinstall_retained_all_source_ids_and_settings": true,
+  "final_reinstall_health": {
+    "status": "ok",
+    "version": "M8",
+    "identity": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+    "schema_version": 1,
+    "build": "M8-20261026T221318Z-2gyswjZY"
+  },
+  "reboot_retained_source_ids_selections_and_enabled_states": true,
+  "reboot_music_worker_recovered_automatically": true,
+  "reboot_health": {
+    "status": "ok",
+    "version": "M8",
+    "identity": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+    "schema_version": 1,
+    "build": "M8-20261026T221318Z-2gyswjZY"
+  },
+  "reboot_source_status": [
+    {
+      "name": "M8 acceptance music",
+      "kind": "music",
+      "state": "playing",
+      "folder": "/srv/fh-m8-acceptance",
+      "track": "second.wav",
+      "id": "0b8cbcc2-94b3-4fbd-b478-7228fed504e0",
+      "observed": {
+        "available": true,
+        "message": "Playing.",
+        "updated": 1793053214.575271,
+        "state": "playing",
+        "track": "stereo.wav"
+      }
+    },
+    {
+      "name": "M8 acceptance input channel 2",
+      "kind": "input",
+      "state": "playing",
+      "device": "pw:alsa_input.platform-snd_aloop.0.analog-stereo",
+      "channels": [
+        2
+      ],
+      "id": "4c1749ac-2626-40eb-bb7e-9e24fdbd7571",
+      "observed": {
+        "available": false,
+        "message": "The configured input is disconnected or unavailable. It will retry when this device returns.",
+        "updated": 1793053213.4020424,
+        "state": "unavailable",
+        "track": ""
+      }
+    },
+    {
+      "name": "M8 acceptance Bluetooth",
+      "kind": "bluetooth",
+      "state": "playing",
+      "device": "00:AA:01:01:00:01",
+      "id": "0e6fbc28-7296-4a98-93fb-e860605b69b3",
+      "observed": {
+        "available": false,
+        "message": "Bluetooth audio is unavailable from this device. Log in to a local PipeWire desktop, connect the paired device and start audio on it.",
+        "updated": 1793053213.42734,
+        "state": "unavailable",
+        "track": ""
+      }
+    }
+  ],
+  "tests": {
+    "local_total": 119,
+    "local_passed": 118,
+    "local_skipped_missing_ffmpeg": 1,
+    "ubuntu_native_source_total": 11,
+    "ubuntu_native_source_passed": 11,
+    "fedora_native_source_total": 11,
+    "fedora_native_source_passed": 11,
+    "dashboard_javascript": "passed",
+    "installer_shell_syntax": "passed"
+  },
+  "cleanup": {
+    "temporary_sources_removed_using_ui": 3,
+    "owned_test_streams_removed_automatically": true,
+    "remaining_connected_destinations_on_silence": true,
+    "test_media_removed": true,
+    "test_session_revoked": true
+  },
+  "user_authorized_vm_only_testing_with_bluetooth_audio_gap_documented": true
+}

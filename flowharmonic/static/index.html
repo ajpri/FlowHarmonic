@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/app.js" defer></script>
   <script src="/static/network.js" defer></script>
+  <script src="/static/sources.js" defer></script>
+  <script src="/static/scenes.js" defer></script>
 </head>
 <body>
   <header><a class="brand" href="/" aria-label="FlowHarmonic home">FlowHarmonic</a><div class="header-actions"><span id="connection" role="status">Connecting…</span><button id="sign-out" type="button">Sign out</button></div></header>
@@ -22,6 +24,20 @@
       </section>
     </div>
     <p id="local-status" role="status"></p>
+    <p id="system-status" role="status"></p>
+    <div id="system-nodes"></div>
+    <details id="scenes">
+      <summary>Scenes</summary>
+      <p>Save source, volume and mute settings for selected destinations.</p>
+      <p id="scene-message" role="status"></p>
+      <button id="refresh-scenes" type="button">Refresh scenes</button>
+      <div id="scene-list"></div>
+      <form id="scene-form">
+        <label for="scene-name">Scene name</label><input id="scene-name" required maxlength="80" autocomplete="off">
+        <div id="scene-destinations"></div>
+        <button type="submit">Save current settings</button>
+      </form>
+    </details>
     <details id="node-settings">
       <summary>Node settings</summary>
       <form id="node-settings-form">
@@ -29,6 +45,37 @@
         <input id="node-name-input" type="text" required maxlength="80" autocomplete="off">
         <button id="save-node" type="submit">Save name</button>
       </form>
+      <details><summary>Source visibility</summary><p>Hidden sources are removed from new selections. Existing playback continues.</p><div id="source-visibility"></div></details>
+    </details>
+    <details id="source-setup">
+      <summary>Local source setup</summary>
+      <p>Configure sources on this node. Adding an input does not play it through speakers.</p>
+      <p id="source-setup-message" role="status"></p>
+      <button id="refresh-source-setup" type="button">Refresh sources</button>
+      <div id="configured-sources"></div>
+      <form id="source-setup-form">
+        <label for="source-kind">Source type</label>
+        <select id="source-kind"><option value="input">Microphone, line-in or USB input</option><option value="music">Local music folder</option><option value="bluetooth">Bluetooth receiver</option></select>
+        <label for="source-name">Source name</label><input id="source-name" required maxlength="80" autocomplete="off">
+        <div id="input-settings">
+          <label for="source-device">Input device</label><select id="source-device"></select>
+          <label id="source-channels-label" for="source-channels">Channel or channel pair</label><input id="source-channels" value="1,2" placeholder="1 or 1,2" autocomplete="off">
+          <p>Channel numbers start at 1. A single channel plays on both stereo channels. Choose a hardware input, not a speaker monitor.</p>
+        </div>
+        <div id="music-settings" hidden>
+          <label for="source-folder">Local music folder</label><input id="source-folder" placeholder="/srv/music" autocomplete="off">
+          <button id="load-tracks" type="button">Read tracks</button>
+          <label for="source-track">Track</label><select id="source-track"><option value="">First available track</option></select>
+          <p>The folder must be readable by FlowHarmonic. Playback continues through its tracks in order.</p>
+        </div>
+        <button type="submit" id="save-source">Add source</button><button type="button" id="cancel-source-edit" hidden>Cancel edit</button>
+      </form>
+      <details id="bluetooth-settings"><summary>Bluetooth pairing</summary>
+        <p id="bluetooth-message" role="status"></p>
+        <button type="button" id="bluetooth-pair">Enable pairing for two minutes</button>
+        <button type="button" id="bluetooth-close">Close pairing</button>
+        <div id="bluetooth-confirmation"></div><div id="bluetooth-devices"></div>
+      </details>
     </details>
     <details id="network-settings">
       <summary id="network-summary">Connections</summary>
@@ -50,10 +97,11 @@
     <details id="diagnostics">
       <summary>Diagnostics</summary>
       <button id="refresh-diagnostics" type="button">Refresh diagnostics</button>
+      <p>Configuration backup and restore: use <code>sudo flowharmonic backup /root/flowharmonic.zip</code> and <code>sudo flowharmonic restore /root/flowharmonic.zip</code> on this node. Backups contain credentials; keep them private.</p>
       <div id="diagnostics-content" aria-live="polite"></div>
     </details>
     <noscript><p>Enable JavaScript to view and control audio.</p></noscript>
   </main>
-  <footer><span id="node-name">Local device</span><span id="version">M6</span></footer>
+  <footer><span id="node-name">Local device</span><span id="version">M9</span></footer>
 </body>
 </html>

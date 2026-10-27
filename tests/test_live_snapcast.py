@@ -73,13 +73,16 @@ class RealSnapcastTests(unittest.TestCase):
                         self.assertTrue(all(process.poll() is None for process in fixture.processes))
                         self.assertEqual(fixture.config.read_bytes(), original_config)
                         fixture.rpc.call('Client.SetVolume', id=office, volume={'percent': 42, 'muted': False})
+                        self.assertEqual(next(d for d in fixture.rpc.snapshot()['destinations'] if d['id'] == office)['volume'], 42)
+                        # M9 restores the assignment explicitly saved through FH
+                        # when it restarts; the independent server stayed usable.
                         with TestClient(create_app()) as app:
                             if not app.app.state.authentication.configured():
                                 app.app.state.authentication.set_password('real Snapcast test passphrase')
                             headers = {'X-FlowHarmonic-Request': '1'}
                             self.assertEqual(app.post('/api/auth/sign-in', json={'password': 'real Snapcast test passphrase'}, headers=headers).status_code, 200)
                             self.assertEqual(app.get('/api/node').json()['identity'], identity)
-                            self.assertEqual(next(d for d in app.get('/api/audio').json()['destinations'] if d['id'] == office)['volume'], 42)
+                            self.assertEqual(next(d for d in app.get('/api/audio').json()['destinations'] if d['id'] == office)['volume'], 31)
                 # A disconnected destination remains visible and cannot be changed.
                 fixture.processes[2].terminate()
                 fixture.processes[2].wait(timeout=5)
@@ -111,8 +114,9 @@ class RealSnapcastTests(unittest.TestCase):
                         headers = {'X-FlowHarmonic-Request': '1'}
                         self.assertEqual(app.post('/api/auth/sign-in', json={'password': 'real Snapcast test passphrase'}, headers=headers).status_code, 200)
                         response = app.get('/api/audio')
-                        self.assertEqual(response.status_code, 503)
-                        self.assertIn('Cannot reach', response.json()['detail'])
+                        self.assertEqual(response.status_code, 200)
+                        self.assertFalse(response.json()['audio_available'])
+                        self.assertIn('Cannot reach', response.json()['local_message'])
                         self.assertEqual(app.get('/health').status_code, 200)
                         self.assertEqual(app.get('/').status_code, 200)
             finally:

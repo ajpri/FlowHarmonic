@@ -25,6 +25,7 @@ from .desktop import SOURCE as DESKTOP_SOURCE
 from .desktop_provision import prepare as prepare_desktop, start as start_desktop, pause as pause_desktop
 from .hardware import playback_outputs, probe_output
 from .snapcast import AudioError, Snapcast
+from .playback_target import target as playback_target, joined
 
 MARKER = '# Managed by FlowHarmonic local audio\n'
 SOURCES = [('silence', 'Silence', 0), ('tone-440', 'Test tone 440 Hz', 440), ('tone-880', 'Test tone 880 Hz', 880)]
@@ -64,7 +65,20 @@ def test_audio(directory):
         write_file(path, frames)
 
 
-def server_configuration(base, assets, desktop_fifo=None):
+def server_configuration(base, assets, desktop_fifo=None, expose=False, extra_sources=()):
+    if expose:
+        # Only the generated, FH-owned stream listener is opened to the LAN.
+        # Management listeners stay on loopback; the original base file is retained.
+        lines=[]
+        section=''
+        for line in base.splitlines():
+            if re.match(r'^\s*\[',line): section=line.strip()
+            if section in ('[stream]','[tcp]','[http]') and re.match(r'^\s*bind_to_address\s*=',line): continue
+            lines.append(line)
+            if section in ('[tcp]','[http]') and re.match(r'^\s*\[',line): lines.append('bind_to_address = 127.0.0.1')
+        base='\n'.join(lines)+'\n'
+        if '[stream]' not in base: base+='\n[stream]\n'
+        base=base.replace('[stream]','[stream]\nbind_to_address = 0.0.0.0',1)
     for line in base.splitlines():
         match = re.match(r'\s*source\s*=\s*(.*)', line)
         if match:
@@ -72,6 +86,11 @@ def server_configuration(base, assets, desktop_fifo=None):
             if name in {name for _, name, _ in SOURCES} | ({DESKTOP_SOURCE} if desktop_fifo else set()):
                 raise RuntimeError('An existing source uses a reserved test-source name; its configuration was retained.')
     lines = [f'source = file://{assets / (filename + ".pcm")}?{urlencode({"name": name, "sampleformat": "48000:16:2", "codec": "pcm"}, quote_via=quote)}' for filename, name, _ in SOURCES]
+    for fifo,identifier in extra_sources:
+        if any(parse_qs(urlsplit(match[1]).query).get('name',[''])[0]==identifier for match in re.finditer(r'^\s*source\s*=\s*(.*)',base,re.M)):
+            raise RuntimeError('An existing stream uses a configured source identity; its configuration was retained.')
+        lines.append(f'pipe://{fifo}?'+urlencode({'name':identifier,'mode':'read','sampleformat':'48000:16:2','codec':'pcm'}))
+        lines[-1]='source = '+lines[-1]
     if desktop_fifo:
         lines.append(f'source = pipe://{desktop_fifo}?name=Desktop%20Audio&mode=read&sampleformat=48000:16:2&codec=pcm')
     block = '\n'.join(lines) + '\n'
@@ -102,8 +121,15 @@ class Provisioner:
             raise RuntimeError(f'Local audio service action failed: {args[1] if len(args) > 1 else args[0]}. {result.stderr.strip()}')
         return result
 
-    def save(self):
-        write_file(self.status_path, json.dumps(self.status, indent=2) + '\n')
+    def save(self, progress=False):
+        status = dict(self.status)
+        if progress:
+            # Ownership must be durable before service mutations, while readers
+            # keep seeing the last complete inventory until detection finishes.
+            for key in ('destinations', 'sources', 'inputs'):
+                if key in self.previous:
+                    status[key] = self.previous[key]
+        write_file(self.status_path, json.dumps(status, indent=2) + '\n')
 
     def own_unit(self, name, text):
         path = self.units / name
@@ -114,7 +140,7 @@ class Provisioner:
                 raise RuntimeError('An unrelated service occupies a local audio service name; it was retained.')
         if name not in self.status['owned_units']:
             self.status['owned_units'].append(name)
-        self.save()  # Save ownership before creating/starting anything.
+        self.save(progress=True)  # Save ownership before creating/starting anything.
         return write_file(path, MARKER + text)
 
     def provision(self, config, audio=None):
@@ -122,6 +148,9 @@ class Provisioner:
         ownership = json.loads((self.etc / 'infrastructure.json').read_text())
         if ownership.get('server') != 'flowharmonic' or ownership.get('client') != 'flowharmonic':
             pause_desktop(self)
+            from .source_provision import pause as pause_sources
+            pause_sources(self)
+            self.status['sources']=[]
             self.status.pop('desktop', None)
             self.status['message'] = 'Existing audio infrastructure was left unchanged. Its available sources and destinations remain controllable.'
             self.save()
@@ -129,6 +158,9 @@ class Provisioner:
         url = urlsplit(config['snapcast_url'])
         if url.hostname not in ('127.0.0.1', 'localhost', '::1'):
             pause_desktop(self)
+            from .source_provision import pause as pause_sources
+            pause_sources(self)
+            self.status['sources']=[]
             self.status.pop('desktop', None)
             self.status['message'] = 'Another audio server is selected. Local provisioning is paused; existing playback is retained.'
             self.save()
@@ -156,11 +188,15 @@ class Provisioner:
         port = url.port or (1705 if url.scheme == 'tcp' else 443 if url.scheme == 'https' else 80)
         if port != (rpc_port if url.scheme == 'tcp' else http_port) or url.scheme == 'https':
             pause_desktop(self)
+            from .source_provision import pause as pause_sources
+            pause_sources(self)
+            self.status['sources']=[]
             self.status.pop('desktop', None)
             self.status['message'] = 'A different audio endpoint is selected. Local provisioning is paused; existing playback is retained.'
             self.save()
             return self.status
         stream_port = int(setting('stream', 'port', '1704'))
+        self.status['stream_port'] = stream_port
         if not 1 <= stream_port <= 65535:
             raise RuntimeError('Invalid local audio port; original configuration was retained.')
         assets = self.path('/var/lib/flowharmonic-audio/tones')
@@ -170,7 +206,7 @@ class Provisioner:
         passwd = self.path('/etc/passwd')
         packaged_user = '_snapserver' if passwd.exists() and any(line.startswith('_snapserver:') for line in passwd.read_text().splitlines()) else 'snapserver'
         user = 'flowharmonic-snapcast' if fedora else packaged_user
-        changed = write_file(generated, server_configuration(base, assets, self.path('/run/flowharmonic-desktop/audio.pcm')))
+
         state = 'flowharmonic-snapcast' if fedora else 'snapserver'
         data = setting('server', 'datadir', str(self.path('/var/lib/' + state)))
         if not Path(data).is_absolute() or any(c in data for c in '\r\n'):
@@ -195,6 +231,9 @@ UMask=0027
 WantedBy=multi-user.target
 ''')
         session, fifo = prepare_desktop(self, node, user)
+        from .source_provision import prepare as prepare_sources
+        extra_sources=prepare_sources(self,session,user)
+        changed = write_file(generated, server_configuration(base, assets, fifo, joined(self.root),extra_sources))
         if not fedora:
             self.command('systemctl', 'disable', '--now', 'snapserver.service')
             self.command('systemctl', 'disable', '--now', 'snapclient.service')
@@ -243,6 +282,7 @@ WantedBy=multi-user.target
                     raise RuntimeError('The local sound card could not be initialized automatically.')
                 initialized_cards.add(card)
             desired.append(unit)
+            playback_host, playback_port = playback_target(self.root,node,identifier,stream_port)
             text = f'''[Unit]
 Description=FlowHarmonic playback output
 After=network.target sound.target {server_unit}
@@ -252,7 +292,7 @@ StartLimitIntervalSec=0
 User=flowharmonic-audio
 Group=flowharmonic-audio
 SupplementaryGroups=audio
-ExecStart={unit_quote(binary_dir / 'snapclient')} --host 127.0.0.1 --port {stream_port} --hostID {identifier} --player alsa --soundcard {unit_quote(output['device'])} --mixer software
+ExecStart={unit_quote(binary_dir / 'snapclient')} --host {playback_host} --port {playback_port} --hostID {identifier} --player alsa --soundcard {unit_quote(output['device'])} --mixer software
 Restart=always
 RestartSec=5
 NoNewPrivileges=true
@@ -312,7 +352,7 @@ def main():
     except Exception as error:
         provisioner.status['message'] = 'Local audio setup could not finish. Playback settings were retained; setup will retry automatically.'
         provisioner.status['error'] = str(error)
-        provisioner.save()
+        provisioner.save(progress=True)
         print(str(error), file=sys.stderr)
         raise SystemExit(1)
 

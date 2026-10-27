@@ -12,7 +12,7 @@ except ModuleNotFoundError:  # Python 3.10
 def load_config():
     path = Path(os.environ.get("FLOWHARMONIC_CONFIG", "/etc/flowharmonic/config.toml"))
     data = tomllib.loads(path.read_text()) if path.exists() else {}
-    unknown = set(data) - {"name", "host", "port", "snapcast_url"}
+    unknown = set(data) - {"name", "host", "port", "snapcast_url", "snapcast_stream_port"}
     if unknown:
         raise ValueError(f"Unknown settings: {', '.join(sorted(unknown))}")
     config = {"name": "FlowHarmonic", "host": "0.0.0.0", "port": 8080, "snapcast_url": "tcp://127.0.0.1:1705", **data}
@@ -22,6 +22,8 @@ def load_config():
         raise ValueError("host must be a nonempty address")
     if type(config["port"]) is not int or not 1 <= config["port"] <= 65535:
         raise ValueError("port must be between 1 and 65535")
+    if type(config.get('snapcast_stream_port',1704)) is not int or not 1 <= config.get('snapcast_stream_port',1704) <= 65535:
+        raise ValueError('snapcast_stream_port must be between 1 and 65535')
     if not isinstance(config['snapcast_url'], str):
         raise ValueError('snapcast_url must be a URL')
     url = urlsplit(config['snapcast_url'])

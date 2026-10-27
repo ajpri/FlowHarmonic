@@ -1,0 +1,206 @@
+{
+  "milestone": "M7",
+  "date": "2026-10-26",
+  "native_inventory_after_reinstall": {
+    "sources": [
+      {
+        "id": "a890de3c-074a-4920-b3c8-329f5b3d005a/Silence",
+        "name": "Silence",
+        "status": "playing",
+        "visible": true,
+        "node_id": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+        "node_name": "M3 acceptance"
+      },
+      {
+        "id": "a890de3c-074a-4920-b3c8-329f5b3d005a/Test tone 440 Hz",
+        "name": "Test tone 440 Hz",
+        "status": "playing",
+        "visible": true,
+        "node_id": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+        "node_name": "M3 acceptance"
+      },
+      {
+        "id": "a890de3c-074a-4920-b3c8-329f5b3d005a/Test tone 880 Hz",
+        "name": "Test tone 880 Hz",
+        "status": "playing",
+        "visible": true,
+        "node_id": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+        "node_name": "M3 acceptance"
+      },
+      {
+        "id": "a890de3c-074a-4920-b3c8-329f5b3d005a/default",
+        "name": "default",
+        "status": "idle",
+        "visible": true,
+        "node_id": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+        "node_name": "M3 acceptance"
+      }
+    ],
+    "all_sources": [
+      {
+        "id": "3ead16b8-d2d0-47be-9ebc-88bcbf85ce50/Silence",
+        "name": "Silence",
+        "status": "idle",
+        "visible": false,
+        "node_id": "3ead16b8-d2d0-47be-9ebc-88bcbf85ce50",
+        "node_name": "FlowHarmonic"
+      },
+      {
+        "id": "3ead16b8-d2d0-47be-9ebc-88bcbf85ce50/Test tone 440 Hz",
+        "name": "Test tone 440 Hz",
+        "status": "idle",
+        "visible": false,
+        "node_id": "3ead16b8-d2d0-47be-9ebc-88bcbf85ce50",
+        "node_name": "FlowHarmonic"
+      },
+      {
+        "id": "3ead16b8-d2d0-47be-9ebc-88bcbf85ce50/Test tone 880 Hz",
+        "name": "Test tone 880 Hz",
+        "status": "idle",
+        "visible": false,
+        "node_id": "3ead16b8-d2d0-47be-9ebc-88bcbf85ce50",
+        "node_name": "FlowHarmonic"
+      },
+      {
+        "id": "3ead16b8-d2d0-47be-9ebc-88bcbf85ce50/Desktop Audio",
+        "message": "Log in to a local PipeWire desktop to share desktop audio.",
+        "name": "Desktop Audio",
+        "status": "disabled",
+        "visible": false,
+        "node_id": "3ead16b8-d2d0-47be-9ebc-88bcbf85ce50",
+        "node_name": "FlowHarmonic"
+      },
+      {
+        "id": "3ead16b8-d2d0-47be-9ebc-88bcbf85ce50/Local",
+        "name": "Local",
+        "status": "idle",
+        "visible": false,
+        "node_id": "3ead16b8-d2d0-47be-9ebc-88bcbf85ce50",
+        "node_name": "FlowHarmonic"
+      },
+      {
+        "id": "a890de3c-074a-4920-b3c8-329f5b3d005a/Silence",
+        "name": "Silence",
+        "status": "playing",
+        "visible": true,
+        "node_id": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+        "node_name": "M3 acceptance"
+      },
+      {
+        "id": "a890de3c-074a-4920-b3c8-329f5b3d005a/Test tone 440 Hz",
+        "name": "Test tone 440 Hz",
+        "status": "playing",
+        "visible": true,
+        "node_id": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+        "node_name": "M3 acceptance"
+      },
+      {
+        "id": "a890de3c-074a-4920-b3c8-329f5b3d005a/Test tone 880 Hz",
+        "name": "Test tone 880 Hz",
+        "status": "playing",
+        "visible": true,
+        "node_id": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+        "node_name": "M3 acceptance"
+      },
+      {
+        "id": "a890de3c-074a-4920-b3c8-329f5b3d005a/Desktop Audio",
+        "name": "Desktop Audio",
+        "status": "playing",
+        "message": "Desktop audio is ready.",
+        "visible": false,
+        "node_id": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+        "node_name": "M3 acceptance"
+      },
+      {
+        "id": "a890de3c-074a-4920-b3c8-329f5b3d005a/default",
+        "name": "default",
+        "status": "idle",
+        "visible": true,
+        "node_id": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+        "node_name": "M3 acceptance"
+      }
+    ],
+    "destinations": [
+      {
+        "available": true,
+        "id": "3ead16b8-d2d0-47be-9ebc-88bcbf85ce50/fh-809b33aa970c5a1c8a16a7451eccf3a2",
+        "muted": false,
+        "name": "fh-fedora-m6 - Generic Analog",
+        "owned": true,
+        "ready": true,
+        "source_id": "a890de3c-074a-4920-b3c8-329f5b3d005a/Desktop Audio",
+        "volume": 37,
+        "node_id": "3ead16b8-d2d0-47be-9ebc-88bcbf85ce50",
+        "node_name": "FlowHarmonic"
+      },
+      {
+        "id": "a890de3c-074a-4920-b3c8-329f5b3d005a/fh-de60a1779da15a1b9348e8abda9e7859",
+        "name": "fh-m3-acceptance - Generic Analog",
+        "source_id": "a890de3c-074a-4920-b3c8-329f5b3d005a/Silence",
+        "volume": 100,
+        "muted": false,
+        "available": false,
+        "owned": false,
+        "ready": false,
+        "node_id": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+        "node_name": "M3 acceptance"
+      },
+      {
+        "id": "a890de3c-074a-4920-b3c8-329f5b3d005a/fh-listening-test-pc",
+        "name": "Test PC (listening test)",
+        "source_id": "a890de3c-074a-4920-b3c8-329f5b3d005a/Silence",
+        "volume": 50,
+        "muted": false,
+        "available": true,
+        "owned": false,
+        "ready": false,
+        "node_id": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+        "node_name": "M3 acceptance"
+      },
+      {
+        "id": "a890de3c-074a-4920-b3c8-329f5b3d005a/fh-84b6170736e45479838a35653d66c8d2",
+        "name": "fh-m3-acceptance - Desktop Speakers",
+        "source_id": "a890de3c-074a-4920-b3c8-329f5b3d005a/Silence",
+        "volume": 100,
+        "muted": false,
+        "available": true,
+        "owned": true,
+        "ready": true,
+        "node_id": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+        "node_name": "M3 acceptance"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "3ead16b8-d2d0-47be-9ebc-88bcbf85ce50",
+        "name": "FlowHarmonic",
+        "available": true
+      },
+      {
+        "id": "a890de3c-074a-4920-b3c8-329f5b3d005a",
+        "name": "M3 acceptance",
+        "available": true
+      }
+    ],
+    "local_message": "",
+    "system_message": "M7 audio acceptance \u00b7 Coordinator connected"
+  },
+  "pcm_after_reinstall": {
+    "ubuntu": {
+      "rate": 44100,
+      "peak": 1196,
+      "amplitude_440": 1194.974,
+      "amplitude_880": 0.01
+    },
+    "fedora": {
+      "rate": 44100,
+      "peak": 195,
+      "amplitude_440": 195.043,
+      "amplitude_880": 0.003
+    }
+  },
+  "coordinator_pause_continued_audio": true,
+  "fedora_reboot_route_and_visibility_retained": true,
+  "mute_new_recorded_bytes_over_3_seconds": 0,
+  "ui_method": "Minimal DOM event handlers and real installed HTTP endpoints; no visual browser assertion"
+}

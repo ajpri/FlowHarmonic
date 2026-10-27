@@ -36,7 +36,7 @@ function renderNetwork(state) {
   document.getElementById("join-system-form").hidden = Boolean(member) || outbound;
   if (member) {
     networkContent.append(element("p", `${member.name} · ${state.is_host ? "System host" : "Joined"}`));
-    networkContent.append(element("p", "Systemwide audio routing will be available in M7. Local audio controls remain independent."));
+    networkContent.append(element("p", state.is_host ? "This node coordinates system audio. Sources and destinations from joined nodes appear above." : "Audio changes on this node go through the coordinator. Existing playback continues if its web service is unavailable."));
     if (state.is_host) {
       networkContent.append(element("p", state.accepting ? "Join requests are allowed for up to 10 minutes. Each request still needs approval." : "Join requests are closed."));
       networkButton(networkContent, state.accepting ? "Close join requests" : "Allow join requests", () => networkChange("allow", {enabled: !state.accepting}));
@@ -51,7 +51,7 @@ function renderNetwork(state) {
       if (!state.peers.length) networkContent.append(element("p", "No other nodes have joined yet."));
     }
     networkButton(networkContent, state.is_host ? "Dissolve system" : "Leave system", () => {
-      if (window.confirm(state.is_host ? "Dissolve this system and revoke all memberships? Local audio settings will remain unchanged." : "Leave this system? Local audio settings will remain unchanged.")) networkChange("leave", {});
+      if (window.confirm(state.is_host ? "Dissolve this system and revoke all memberships? Coordinated routes end; standalone audio settings are retained." : "Leave this system? Coordinated routes end; standalone audio settings are retained.")) networkChange("leave", {});
     });
   } else networkContent.append(element("p", "This node is independent. Create a system here, or request to join a nearby system."));
   for (const pending of state.pending) {
