@@ -1,4 +1,4 @@
 """FlowHarmonic application foundation."""
 
-VERSION = "M9"
+VERSION = "26.10.27"
 SCHEMA_VERSION = 1

@@ -1,0 +1,76 @@
+{
+  "milestone": "M10",
+  "date": "2026-10-27",
+  "status": "implemented and VM acceptance demonstrated; platform/hardware gaps documented",
+  "platforms": [
+    "Debian 13 x86_64",
+    "Ubuntu 22.04.5 x86_64",
+    "Fedora 43 x86_64 (SELinux enforcing)"
+  ],
+  "automated": {
+    "total": 147,
+    "passed": 146,
+    "skipped": 1,
+    "seconds": 81.647,
+    "skip": "Local ffmpeg unavailable; all 11 native source tests passed on Debian",
+    "real_snapcast_tcp_http": "passed",
+    "javascript_dashboard": "passed",
+    "javascript_scenes": "passed",
+    "python_compile": "passed",
+    "shell_syntax": "passed"
+  },
+  "native": {
+    "debian_clean_install": true,
+    "debian_reboot": true,
+    "verified_updates_all_three": true,
+    "wrong_checksum_rejected": true,
+    "failed_activation_rollback": true,
+    "default_uninstall_reinstall_all_three": true,
+    "reachable_member_notification": true,
+    "unreachable_host_removal": true,
+    "host_consequences_before_confirmation": true,
+    "purge_two_confirmations": true,
+    "purge_retains_independent_server_same_pid": true,
+    "purge_retains_config_and_all_rpms": true,
+    "purge_retains_unrelated_file": true,
+    "dry_run_both_modes_21_files_unchanged": true,
+    "damaged_database_restore_stopped_application": true,
+    "explicit_post_purge_identity_reconstruction": true,
+    "restored_player_original_identity_and_route": true,
+    "native_departure_refresh_preserves_membership_and_key": true,
+    "web_two_sided_enrollment": true,
+    "web_music_source_configuration": true,
+    "web_two_destination_routing_volume_mute_scene_save_apply": true,
+    "no_manual_snapcast_configuration": true
+  },
+  "recordings_after_reconstruction": {
+    "sample_rate": 44100,
+    "debian": {
+      "hz": 660.0,
+      "rms": 3532.31
+    },
+    "fedora": {
+      "hz": 660.0,
+      "rms": 1169.75,
+      "volume": 60
+    }
+  },
+  "cleanup": {
+    "all_nodes": "independent",
+    "vm_outputs": "local Silence, 100%, unmuted",
+    "test_source_scene_and_independent_server": "removed",
+    "ubuntu_identity_password": "retained",
+    "fedora_identity_credential_state": "restored original",
+    "ubuntu_test_lan": "down",
+    "existing_pc_destinations": "unchanged",
+    "extra_debian_vm": "powered down after validation; disk retained"
+  },
+  "gaps": [
+    "Other implemented distribution releases and ARM/Pi hardware unvalidated",
+    "Physical Bluetooth A2DP reception retains M8 VM-only gap",
+    "No hosted release feed; trusted artifact location/checksum supplied by administrator",
+    "No OS-package rollback or power-loss-atomic multi-store restore",
+    "Backups exclude user media, external Snapcast stores and OS Bluetooth pairings",
+    "Snapcast may retain a retired fresh-install client as an offline record after identity reconstruction"
+  ]
+}

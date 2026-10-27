@@ -70,10 +70,55 @@ class BackupTests(unittest.TestCase):
         self.assertEqual(self.config.read_bytes(), before)
         self.assertEqual(list(self.root.glob('.restore-*')), [])
 
+    def test_damaged_current_database_has_a_safe_raw_snapshot_and_can_be_repaired(self):
+        from flowharmonic.backup import snapshot_files, save_damaged_snapshot
+        export(self.data,self.config,self.archive)
+        self.engine.scenes.path.write_bytes(b'damaged SQLite contents')
+        snapshot=snapshot_files(self.data,self.config)
+        forensic=self.root/'damaged-before-restore.zip';save_damaged_snapshot(snapshot,forensic)
+        self.assertEqual(forensic.stat().st_mode & 0o777,0o600)
+        _, valid=read_archive(self.archive,self.data,self.config)
+        restore_files(valid,self.data,self.config,os.getuid(),os.getgid())
+        self.assertEqual(self.engine.scenes.view()['scenes'][0]['name'],'Evening')
+        self.assertEqual(snapshot['scenes.db'],b'damaged SQLite contents')
+        self.engine.scenes.path.unlink();self.engine.scenes.path.symlink_to(self.config)
+        with self.assertRaises(OSError):snapshot_files(self.data,self.config)
+
     def test_different_node_and_future_schema_are_refused(self):
         export(self.data,self.config,self.archive)
         other = self.root / 'other'; initialize(other)
         with self.assertRaisesRegex(ValueError,'another node'): read_archive(self.archive,other,self.config)
+        restored, _ = read_archive(self.archive,other,self.config,replace_identity=True)
+        self.assertEqual(restored['identity'], self.identity)
+        self.ledger.write_text('{"server":"existing","client":"flowharmonic"}')
+        with self.assertRaisesRegex(ValueError,'ownership'):read_archive(self.archive,other,self.config,replace_identity=True)
+        self.ledger.write_text('{"server":"existing","client":"existing"}')
         import sqlite3
         with sqlite3.connect(self.engine.scenes.path) as db: db.execute('PRAGMA user_version=999')
         with self.assertRaisesRegex(ValueError,'unsupported'): export(self.data,self.config,self.root / 'future.zip')
+
+    def test_restore_starts_application_when_damaged_data_had_stopped_it(self):
+        import argparse
+        from contextlib import nullcontext, redirect_stdout
+        import io
+        from types import SimpleNamespace
+        from unittest.mock import patch
+        from flowharmonic import backup
+        export(self.data,self.config,self.archive)
+        self.engine.scenes.path.write_bytes(b'damaged SQLite contents')
+        metadata=self.config.parent/'local-audio.json'
+        metadata.write_text('{"owned_units":["flowharmonic-playback-aaaaaaaaaaaaaaaaaaaa.service"]}')
+        ownership=metadata.read_bytes()
+        account=SimpleNamespace(pw_uid=os.getuid(),pw_gid=os.getgid())
+        with patch.object(backup,'open',side_effect=lambda *a,**k:open(self.root/'maintenance.lock',*a[1:],**k),create=True), \
+             patch.object(backup,'quiesce',side_effect=nullcontext), \
+             patch.object(backup.pwd,'getpwnam',return_value=account), \
+             patch.object(backup.sys,'stdin',SimpleNamespace(isatty=lambda:True)), \
+             patch('builtins.input',return_value='RESTORE '+self.identity), \
+             patch.object(backup.subprocess,'run') as systemctl, \
+             patch.object(backup,'verify_startup') as verify,redirect_stdout(io.StringIO()):
+            backup.run(argparse.Namespace(command='restore',file=self.archive,replace_identity=True),self.data,self.config)
+            systemctl.assert_called_once_with(['systemctl','start','flowharmonic.service'],check=True)
+            verify.assert_called_once_with()
+        self.assertEqual(self.engine.scenes.view()['scenes'][0]['name'],'Evening')
+        self.assertEqual(metadata.read_bytes(),ownership)

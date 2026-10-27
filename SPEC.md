@@ -2,11 +2,15 @@
 
 ## Technical Specification
 
-**Version:** Pre-release (milestone phase)
-**Versioning:** During development, builds are identified by milestone (M1–M10), so work can be directed as "build milestone X." After M10 (V1 release), versioning switches to date-based (YY.MM.DD). No semantic versions, ever.
-**Status:** Initial development specification
-**Target:** V1
-**Initial platform:** Linux
+**Version:** 26.10.27
+**Status:** Preview Release
+**Versioning:** Product releases use date-based YY.MM.DD identifiers. These are calendar dates, not semantic versions. M1–M10 identify historical implementation and acceptance work; they are not the current release version. A preview label does not claim production readiness.
+**Platform:** Linux
+
+This specification defines the product's behavior and boundaries. The current
+preview implements the M1–M10 delivery scope. Distribution and hardware support
+is qualified by demonstrated verification, with remaining gaps documented in
+`docs/verification.md`; unvalidated targets must not be presented as certified.
 
 ---
 
@@ -153,7 +157,7 @@ Each destination exposes:
 
 Multiple destinations may select the same source.
 
-Each destination may select only one source at a time in V1.
+Each destination may select only one source at a time in the initial product scope.
 
 ### 3.2 Interface Rules
 
@@ -192,7 +196,7 @@ A separate coordinator frontend is not required.
 
 ### 4.1 Audio Sources
 
-FH must support the following source types by V1.
+FH must support the following source types within the initial product scope.
 
 | Source | Behavior |
 |---|---|
@@ -353,7 +357,7 @@ Coordinator functionality is included in the standard FH application.
 
 It is activated when a system is created or managed.
 
-V1 assumes one authoritative coordinator per managed system.
+The initial product scope assumes one authoritative coordinator per managed system.
 
 Automatic coordinator election and high availability are not required.
 
@@ -565,7 +569,7 @@ Password management and the following node maintenance actions are available thr
 |---|---|
 | `flowharmonic` or `sudo flowharmonic` | Show command help and maintenance examples |
 | `flowharmonic status` | Report health, identity, dashboard URL, and whether a password is configured |
-| `flowharmonic --version` | Report the milestone version |
+| `flowharmonic --version` | Report the date-based product version |
 | `flowharmonic --help` | Show command usage |
 | `sudo flowharmonic password` | Create, change, or recover the management password |
 | `sudo flowharmonic diagnostics` | Report local configuration, audio, and service status without changing them |
@@ -602,7 +606,7 @@ Requirements:
 - Verify successful startup.
 - Restore the previous working application release if the update fails.
 
-Automatic update installation is not required for V1.
+Automatic update installation is not required for the preview.
 
 ### 7.2 Reinstallation
 
@@ -652,7 +656,7 @@ After confirmation, attempt to notify the system host when uninstalling a member
 
 ### 7.5 Backup and Restore
 
-Before V1 release, FH must support exporting and restoring configuration.
+FH must support exporting and restoring configuration.
 
 Backups should include the configuration and state necessary to reconstruct a node or managed system.
 
@@ -694,7 +698,7 @@ Session cookies must be HttpOnly, host-only, and SameSite=Strict, with Secure en
 
 The current installer serves HTTP for trusted local-network use. HTTP does not encrypt passwords or cookies. Use encrypted transport, such as HTTPS or an SSH tunnel, when the network cannot be trusted. Automatic HTTPS provisioning is not yet implemented.
 
-Remote access over the public internet is outside V1 scope.
+Remote access over the public internet is outside the preview scope.
 
 ### 8.4 Updates
 
@@ -708,9 +712,9 @@ FH must not modify unrelated services or delete configurations it does not own w
 
 ---
 
-## 9. V1 Non Goals
+## 9. Product Non Goals
 
-The following are outside V1:
+The following are outside the initial product scope:
 
 - Mixing multiple sources into one destination
 - Automatic ducking
@@ -728,13 +732,17 @@ The following are outside V1:
 
 Windows and macOS remain future platform targets.
 
-The V1 architecture should avoid unnecessary Linux specific assumptions in its user facing API, but it does not need speculative cross platform abstractions.
+The product architecture should avoid unnecessary Linux specific assumptions in its user facing API, but it does not need speculative cross platform abstractions.
 
 ---
 
-## 10. Development Milestones
+## 10. Delivery Milestones and Acceptance History
 
 Every milestone must remain installable, accessible through the web interface, and upgradable without losing persistent data.
+
+The following milestones define delivery scope and acceptance criteria. They
+remain as requirement history; current product releases use YY.MM.DD versions.
+A milestone's implementation does not waive its verification requirements.
 
 ### M1: Application Foundation
 
@@ -884,7 +892,7 @@ A destination-only node such as Living Room speakers appears under destinations 
 
 ### M8: Additional Sources
 
-Goal: Complete the planned V1 source types.
+Goal: Complete the planned initial source types.
 
 Requirements:
 
@@ -922,7 +930,7 @@ Acceptance criteria:
 
 A multizone configuration can be saved, restored, and recovered after normal service or device restarts without manual infrastructure configuration.
 
-### M10: V1 Release Candidate
+### M10: Release Validation
 
 Goal: Deliver a reproducible, maintainable, user ready system.
 

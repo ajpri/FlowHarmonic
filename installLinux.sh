@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 umask 022
 SOURCE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+VERSION=$(sed -n 's/^VERSION = "\([^"]*\)"$/\1/p' "$SOURCE/flowharmonic/__init__.py")
 # shellcheck source=scripts/install-common.sh
 source "$SOURCE/scripts/install-common.sh"
 
@@ -14,6 +15,11 @@ main() {
     arch=$(uname -m)
     platform_supported "$ID" "$VERSION_ID" "$arch" || fail "Unsupported platform: $ID $VERSION_ID $arch. See docs/verification.md."
     printf 'Platform: %s %s (%s)\n' "$ID" "$VERSION_ID" "$arch"
+    if platform_validated "$ID" "$VERSION_ID" "$arch"; then
+        printf 'Validation: tested release/architecture; see docs/verification.md for scope.\n'
+    else
+        printf 'Validation: implemented target, not yet verified on this release/architecture. See docs/verification.md.\n'
+    fi
     [[ -d /run/systemd/system ]] || fail 'A booted systemd system is required.'
     [[ ${1:-} != --check ]] || return 0
     [[ $EUID == 0 ]] || fail 'Run with sudo: sudo ./installLinux.sh'
@@ -84,7 +90,7 @@ main() {
     fi
 
     # Each attempt gets a distinct path. venv paths must never move after creation.
-    build="M9-$(date -u +%Y%m%dT%H%M%SZ)-$(basename "$work" | cut -d. -f2)"
+    build="$VERSION-$(date -u +%Y%m%dT%H%M%SZ)-$(basename "$work" | cut -d. -f2)"
     release="/opt/flowharmonic/releases/$build"
     install -d -m 0755 "$release"
     cp -R "$SOURCE/flowharmonic" "$release/"
@@ -172,7 +178,7 @@ PY
     rollback_needed=0
     install -d -m 0755 /usr/local/bin
     install -m 0755 "$SOURCE/packaging/flowharmonic" /usr/local/bin/flowharmonic
-    # Audio provisioning runs only after the M9 application has passed activation.
+    # Audio provisioning runs only after the application has passed activation.
     # A failed hardware/service setup leaves the working dashboard available.
     install -m 0644 "$SOURCE/packaging/flowharmonic-audio.service" /etc/systemd/system/flowharmonic-audio.service
     install -m 0644 "$SOURCE/packaging/flowharmonic-audio.timer" /etc/systemd/system/flowharmonic-audio.timer
@@ -195,7 +201,7 @@ PY
     systemctl start flowharmonic-audio.service || fail 'Application installed; local audio setup needs attention. The dashboard remains available and setup retries automatically. Inspect journalctl -u flowharmonic-audio.'
     (cd "$release" && "$release/.venv/bin/python" -m flowharmonic password --if-needed) ||
         printf 'Password setup was not completed. Run sudo flowharmonic password when ready.\n'
-    printf '\nFlowHarmonic M9 installed. Dashboard: %s/\n' "$health_url"
+    printf '\nFlowHarmonic %s installed. Dashboard: %s/\n' "$VERSION" "$health_url"
     printf 'Maintenance: flowharmonic status | sudo flowharmonic password | sudo flowharmonic logs | sudo flowharmonic restart\n'
     printf 'Your browser remembers sign-in across reloads and tabs. Use Sign out on shared devices.\n'
     printf 'Configuration and identity are preserved in /etc/flowharmonic and /var/lib/flowharmonic.\n'

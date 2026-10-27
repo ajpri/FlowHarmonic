@@ -141,7 +141,7 @@ class ApplicationTests(unittest.TestCase):
             health = client.get('/health')
             self.assertEqual(health.status_code, 200)
             self.assertEqual(health.json()['status'], 'ok')
-            self.assertEqual(health.json()['version'], 'M9')
+            self.assertEqual(health.json()['version'], '26.10.27')
             self.assertEqual(client.get('/', follow_redirects=False).headers['location'], '/sign-in')
             self.assertEqual(client.get('/api/node').status_code, 401)
             self.sign_in(client)
@@ -324,7 +324,7 @@ class ApplicationTests(unittest.TestCase):
 
     def test_cli_version(self):
         output = subprocess.check_output([sys.executable, '-m', 'flowharmonic', '--version'], text=True)
-        self.assertEqual(output.strip(), 'FlowHarmonic M9')
+        self.assertEqual(output.strip(), 'FlowHarmonic 26.10.27')
 
     def test_command_line_password_change_revokes_all_browsers(self):
         with TestClient(create_app()) as client:

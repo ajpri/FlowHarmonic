@@ -12,6 +12,13 @@ platform_supported() {
     return 1
 }
 
+platform_validated() {
+    case "$1:$2:$3" in
+        debian:13:x86_64|ubuntu:22.04:x86_64|fedora:43:x86_64) return 0;;
+        *) return 1;;
+    esac
+}
+
 atomic_link() {
     local target=$1 link=$2
     local temporary="$link.next.$BASHPID"
@@ -23,11 +30,11 @@ wait_health() {
     local url=$1 expected_build=$2 expected_identity=$3 attempt
     for attempt in {1..30}; do
         if curl --noproxy '*' --fail --silent --max-time 2 "$url/health" > "$work/health.json" &&
-            python3 - "$work/health.json" "$expected_build" "$expected_identity" <<'PY'
+            python3 - "$work/health.json" "$expected_build" "$expected_identity" "$VERSION" <<'PY'
 import json, sys
 try:
     data = json.load(open(sys.argv[1]))
-    valid = data['status'] == 'ok' and data['version'] == 'M9' and data['build'] == sys.argv[2]
+    valid = data['status'] == 'ok' and data['version'] == sys.argv[4] and data['build'] == sys.argv[2]
     valid = valid and (not sys.argv[3] or data['identity'] == sys.argv[3])
     sys.exit(0 if valid else 1)
 except (ValueError, KeyError):

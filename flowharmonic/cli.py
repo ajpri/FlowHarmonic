@@ -106,6 +106,10 @@ def main(argv=None):
   sudo flowharmonic connections --help  Manage connections from a terminal
   sudo flowharmonic backup /root/fh.zip Export private node configuration
   sudo flowharmonic restore /root/fh.zip Restore configuration after confirmation
+  sudo flowharmonic update --help       Check or install verified update artifacts
+  sudo flowharmonic uninstall --dry-run Preview removal without changes
+  sudo flowharmonic uninstall           Remove application, keep settings
+  sudo flowharmonic uninstall --purge   Remove FH data after separate confirmation
   sudo flowharmonic logs                Show recent application logs
   sudo flowharmonic restart             Restart the application
 
@@ -125,6 +129,15 @@ Run maintenance commands on the machine where FlowHarmonic is installed.''')
     for command in ('backup', 'restore'):
         backup_parser = commands.add_parser(command, help='Export private configuration' if command == 'backup' else 'Restore this node’s configuration (requires confirmation)')
         backup_parser.add_argument('file', help='Private backup archive path')
+        if command == 'restore':
+            backup_parser.add_argument('--replace-identity', action='store_true', help='Restore an offline original node onto this installation; requires identity-specific confirmation and unchanged infrastructure ownership')
+    update_parser = commands.add_parser('update', help='Check/install a trusted checksum-pinned update artifact (requires sudo)')
+    update_parser.add_argument('source', help='Local .tar.gz artifact or HTTPS URL')
+    update_parser.add_argument('--sha256', required=True, help='Artifact checksum from a trusted channel')
+    update_parser.add_argument('--check', action='store_true', help='Verify the artifact and report its version without installing')
+    uninstall_parser = commands.add_parser('uninstall', help='Remove FH-owned application resources (requires sudo and confirmation)')
+    uninstall_parser.add_argument('--purge', action='store_true', help='Also remove FH data, identity, credentials and backups with separate confirmation')
+    uninstall_parser.add_argument('--dry-run', action='store_true', help='Show the plan without changing files, services or membership')
     from . import connections_cli
     connections_cli.add_parser(commands)
     args = parser.parse_args(argv)
@@ -132,8 +145,16 @@ Run maintenance commands on the machine where FlowHarmonic is installed.''')
         if args.command == 'password':
             change_password(args.if_needed)
             return
-        if args.command in ('logs', 'restart', 'diagnostics', 'name', 'connections', 'backup', 'restore') and os.geteuid() != 0:
+        if args.command in ('logs', 'restart', 'diagnostics', 'name', 'connections', 'backup', 'restore', 'uninstall', 'update') and os.geteuid() != 0:
             raise RuntimeError(f'Run with sudo: sudo flowharmonic {args.command}')
+        if args.command == 'update':
+            from .update import run
+            run(args)
+            return
+        if args.command == 'uninstall':
+            from .uninstall import run
+            run(args)
+            return
         if args.command == 'logs':
             subprocess.run(['journalctl', '-u', 'flowharmonic.service', '-n', '50', '--no-pager'], check=True)
             return

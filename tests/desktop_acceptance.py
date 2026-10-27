@@ -103,9 +103,6 @@ try:
     before = graph()
     result['default_before'] = defaults(before)
     desktop_id = metadata['desktop']['destination']
-    # Keep physical PC silent while the automated VM measurement runs.
-    if any(d['id'] == 'fh-listening-test-pc' and d['available'] for d in inventory['destinations']):
-        api('/api/destinations/fh-listening-test-pc/source', {'source_id': 'Silence'})
     api('/api/destinations/' + desktop_id + '/source', {'source_id': 'Test tone 880 Hz'})
     api('/api/destinations/' + desktop_id + '/volume', {'percent': 100, 'muted': False})
     measured = ROOT / 'received.pcm'

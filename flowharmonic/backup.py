@@ -22,6 +22,7 @@ WRITERS = ('flowharmonic-audio.timer', 'flowharmonic-audio.service', 'flowharmon
 
 
 def check_db(path, name):
+    if Path(path).is_symlink(): raise ValueError('Symbolic-link database paths are not supported for backup or restore.')
     with closing(sqlite3.connect(f'{Path(path).resolve().as_uri()}?mode=ro', uri=True)) as db:
         if db.execute('PRAGMA quick_check').fetchone()[0] != 'ok' or db.execute('PRAGMA user_version').fetchone()[0] != 1:
             raise ValueError(f'{name}: unsupported or damaged database. No files were restored.')
@@ -74,7 +75,7 @@ def export(directory, config_path, destination):
     return manifest
 
 
-def read_archive(archive_path, directory, config_path):
+def read_archive(archive_path, directory, config_path, replace_identity=False):
     archive_path, directory, config_path = Path(archive_path), Path(directory), Path(config_path)
     if archive_path.stat().st_size > LIMIT + 1024 * 1024:
         raise ValueError('Backup exceeds the 64 MiB configuration limit.')
@@ -124,12 +125,38 @@ def read_archive(archive_path, directory, config_path):
     except (sqlite3.Error, OSError, TypeError, ValueError):
         # Root-owned hardware metadata can identify a damaged installation.
         current_id = json.loads((config_path.parent / 'local-audio.json').read_text()).get('owner')
-    if manifest['identity'] != current_id:
-        raise ValueError('This backup belongs to another node. Restore it on its original installation to avoid duplicating identity and trust.')
+    if manifest['identity'] != current_id and not replace_identity:
+        raise ValueError('This backup belongs to another node. Restore it on its original installation, or explicitly use --replace-identity after taking the original node offline.')
     if json.loads(files['infrastructure.json']) != json.loads((config_path.parent / 'infrastructure.json').read_text()):
         raise ValueError('Infrastructure ownership has changed. Existing services were retained; reconcile ownership before restoring.')
     # Do not retain settings absent from an older archive (which would mix states).
     return manifest, files
+
+
+def snapshot_files(directory, config_path):
+    files={}
+    paths={name:Path(directory)/name for name in DATABASES}
+    paths.update({name+suffix:Path(directory)/(name+suffix) for name in DATABASES for suffix in ('-wal','-shm','-journal')})
+    paths.update({'config.toml':Path(config_path),'infrastructure.json':Path(config_path).parent/'infrastructure.json'})
+    for name,path in paths.items():
+        try: fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
+        except FileNotFoundError: continue
+        with os.fdopen(fd,'rb') as stream:
+            import stat
+            if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):raise ValueError('Configuration contains an unexpected special file.')
+            files[name]=stream.read(LIMIT+1)
+        if sum(map(len,files.values()))>LIMIT:raise ValueError('Existing configuration exceeds the 64 MiB recovery limit.')
+    return files
+
+
+def save_damaged_snapshot(files, destination):
+    # Forensics copy only. Ordinary restore continues to require valid schemas.
+    fd=os.open(destination,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600)
+    with os.fdopen(fd,'wb') as output,zipfile.ZipFile(output,'w') as archive:
+        archive.writestr('manifest.json',json.dumps({'format':1,'damaged_snapshot':True,
+            'files':{name:hashlib.sha256(data).hexdigest() for name,data in files.items()}}))
+        for name,data in files.items():archive.writestr(name,data)
+
 
 
 def replace_file(path, payload, mode, uid=None, gid=None):
@@ -146,7 +173,7 @@ def replace_file(path, payload, mode, uid=None, gid=None):
         temporary.unlink(missing_ok=True)
 
 
-def restore_files(files, directory, config_path, uid, gid):
+def restore_files(files, directory, config_path, uid, gid, restore_journals=False):
     directory, config_path = Path(directory), Path(config_path)
     for name in DATABASES:
         path = directory / name
@@ -156,6 +183,8 @@ def restore_files(files, directory, config_path, uid, gid):
             path.unlink(missing_ok=True)
         for suffix in ('-wal', '-shm', '-journal'):
             path.with_name(name + suffix).unlink(missing_ok=True)
+            if restore_journals and name+suffix in files:
+                replace_file(path.with_name(name+suffix),files[name+suffix],0o600,uid,gid)
     replace_file(config_path, files['config.toml'], 0o644)
     for parent in (directory, config_path.parent):
         fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
@@ -188,29 +217,47 @@ def run(args, directory, config_path):
                 export(directory, config_path, args.file)
             print(f'Configuration saved to {args.file}. Contains credentials and trust keys; keep it private. Audio players were left running.')
             return
-        manifest, files = read_archive(args.file, directory, config_path)
+        replace_identity = getattr(args, 'replace_identity', False)
+        manifest, files = read_archive(args.file, directory, config_path, replace_identity)
         print(f"Restore configuration for node {manifest['identity']} from {args.file}.")
         print('This replaces configuration, scenes, credentials and membership on this node. Saved audio assignments may resume. Other nodes are not restored.')
         print('Only restore a trusted backup. A checksum detects damage; it does not authenticate the archive.')
-        if not sys.stdin.isatty() or input('Type RESTORE to continue: ') != 'RESTORE':
+        confirmation = 'RESTORE'
+        if replace_identity:
+            print('IDENTITY REPLACEMENT: the original node must be offline. This restores its credentials and system trust on this installation; never run both copies together.')
+            confirmation = 'RESTORE ' + manifest['identity']
+        if not sys.stdin.isatty() or input('Type ' + confirmation + ' to continue: ') != confirmation:
             raise RuntimeError('Restore cancelled. No files were changed.')
         account = pwd.getpwnam('flowharmonic')
         backups = Path(directory) / 'backups'
         backups.mkdir(mode=0o700, exist_ok=True)
         recovery = backups / ('before-restore-' + str(time.time_ns()) + '.zip')
+        metadata = Path(config_path).parent / 'local-audio.json'
+        previous_metadata = metadata.read_bytes() if metadata.exists() else None
+        previous_files = None
         try:
             with quiesce():
                 # Keep a complete protected recovery copy before replacing anything.
-                export(directory, config_path, recovery)
+                previous_files = snapshot_files(directory, config_path)
+                try:
+                    export(directory, config_path, recovery)
+                except (sqlite3.Error, ValueError):
+                    # A valid backup must also repair a damaged current store.
+                    recovery.unlink(missing_ok=True)
+                    save_damaged_snapshot(previous_files, recovery)
+                    print('Existing data is damaged; a private raw pre-restore snapshot was retained for diagnosis.')
                 restore_files(files, directory, config_path, account.pw_uid, account.pw_gid)
+                # Keep current generated ownership metadata. The provisioner
+                # regenerates inventory from the restored UUID; discarding its
+                # owned-unit list would make running FH players look foreign.
+            # Recovery must also work when damaged data prevented app startup.
+            subprocess.run(['systemctl', 'start', 'flowharmonic.service'], check=True)
             verify_startup()
         except BaseException:
-            if recovery.exists():
-                # Read the original recovery image directly against the same
-                # identity/ownership; never import arbitrary archive paths.
-                _, previous = read_archive(recovery, directory, config_path)
+            if recovery.exists() and previous_files is not None:
                 with quiesce():
-                    restore_files(previous, directory, config_path, account.pw_uid, account.pw_gid)
+                    restore_files(previous_files, directory, config_path, account.pw_uid, account.pw_gid, restore_journals=True)
+                    if previous_metadata is not None: replace_file(metadata, previous_metadata, 0o644)
                 print('Restore failed. Previous configuration reinstated; its private backup was retained.', file=sys.stderr)
             raise
         print(f'Restored and application health verified. Audio setup retries automatically. Pre-restore backup: {recovery}')

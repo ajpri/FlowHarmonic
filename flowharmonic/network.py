@@ -165,6 +165,11 @@ class Membership:
             db.execute('SELECT identity, public_key, name, enrollment FROM peer LIMIT 0')
             db.execute('SELECT id, direction, data, status, expires FROM pending LIMIT 0')
             db.execute('SELECT sender, value, expires FROM nonce LIMIT 0')
+            # Additive metadata; old readers retain schema 1 compatibility.
+            db.execute('CREATE TABLE IF NOT EXISTS lifecycle (id INTEGER PRIMARY KEY CHECK(id=1), version INTEGER NOT NULL, departure TEXT)')
+            db.execute('INSERT OR IGNORE INTO lifecycle VALUES (1,1,NULL)')
+            if db.execute('SELECT version FROM lifecycle WHERE id=1').fetchone()[0]!=1:
+                raise RuntimeError('Lifecycle settings are newer than this application; refusing to reset them')
         self.public = public_key(self.key)
 
     @property
@@ -202,7 +207,10 @@ class Membership:
                 data = json.loads(row[2])
                 pending.append({'id': row[0], 'direction': row[1], 'status': row[3], 'expires': row[4],
                                 'name': data['name'], 'system_name': data['system_name'], 'code': data['code']})
-        return {'membership': {k: v for k, v in membership.items() if k not in ('host_key',)} if membership else None,
+            departure = db.execute('SELECT departure FROM lifecycle WHERE id=1').fetchone()[0]
+        message = ('The previous installation notified the system host of removal. Leave this saved membership, then request to join again with explicit approval.'
+                   if membership and departure and departure==membership.get('enrollment') else '')
+        return {'message':message, 'membership': {k: v for k, v in membership.items() if k not in ('host_key',)} if membership else None,
                 'is_host': bool(self.host(membership)), 'accepting': self.info()['accepting'], 'peers': peers, 'pending': pending}
 
     def create(self, name):
@@ -341,6 +349,10 @@ class Membership:
                     else:
                         raise NetworkError('This join request is no longer available. Cancel it and request to join again.')
             elif membership and not self.host(membership):
+                with database(self.path) as db:
+                    departure = db.execute('SELECT departure FROM lifecycle WHERE id=1').fetchone()[0]
+                if departure == membership.get('enrollment'):
+                    raise NetworkError('The previous installation notified the system host of removal. Leave this saved membership, then request to join again with explicit approval.')
                 result = self.send(membership['host_url'], membership['host_id'], membership['id'], membership['host_key'],
                                    'ping', {'enrollment': membership['enrollment']})
                 if not result.get('member'):

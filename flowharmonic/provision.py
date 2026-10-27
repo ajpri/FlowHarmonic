@@ -267,7 +267,10 @@ WantedBy=multi-user.target
             if not output['connected']:
                 row['message'] = 'No display or receiver is connected to this output.'
                 continue
-            active = unit in self.previous.get('owned_units', []) and self.command('systemctl', 'is-active', '--quiet', unit, check=False).returncode == 0
+            unit_path = self.units / unit
+            marked = (unit_path.is_file() and not unit_path.is_symlink() and
+                      unit_path.read_text().startswith(MARKER))
+            active = (unit in self.previous.get('owned_units', []) or marked) and self.command('systemctl', 'is-active', '--quiet', unit, check=False).returncode == 0
             problem = '' if active else self.probe(output['device'])
             if problem:
                 row['message'] = problem
@@ -275,7 +278,7 @@ WantedBy=multi-user.target
             # Standard ALSA profiles initialize a new, unsaved card's muted
             # power-on defaults. Never reinitialize owned outputs or saved state.
             card = output['device'].split('CARD=', 1)[1].split(',', 1)[0]
-            if unit not in self.previous.get('owned_units', []) and card not in initialized_cards and not self.path('/var/lib/alsa/asound.state').exists():
+            if unit not in self.previous.get('owned_units', []) and not marked and card not in initialized_cards and not self.path('/var/lib/alsa/asound.state').exists():
                 result = self.command('alsactl', 'init', card, check=False)
                 # ALSA reports 99 after successfully applying its generic profile.
                 if result.returncode not in (0, 99):

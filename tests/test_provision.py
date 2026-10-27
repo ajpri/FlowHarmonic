@@ -138,6 +138,20 @@ class ProvisionTests(unittest.TestCase):
             result = p.provision(self.config, audio=Audio())
         self.assertIn(result['destinations'][0]['unit'], result['owned_units'])
 
+    def test_missing_inventory_recovers_marked_running_player_without_busy_probe(self):
+        first=self.provision()
+        (self.etc/'local-audio.json').unlink()
+        self.commands.calls.clear()
+        with patch('flowharmonic.provision.uuid.uuid5',return_value=uuid.UUID('12345678-1234-1234-1234-123456789abc')):
+            result=self.provision(probe=lambda device:self.fail('An owned running player must not be probed as a foreign busy device'))
+        row=result['destinations'][0]
+        self.assertEqual(row['id'],'fh-12345678123412341234123456789abc')
+        self.assertIn(row['unit'],result['owned_units'])
+        self.assertEqual(row['message'],'')
+        self.assertIn('--hostID '+row['id'],(self.root/'etc/systemd/system'/row['unit']).read_text())
+        self.assertIn(['systemctl','restart',row['unit']],self.commands.calls)
+        self.assertFalse(any(args[0]=='alsactl' for args in self.commands.calls))
+
     def test_saved_hardware_mixer_state_is_not_reset(self):
         state = self.root / 'var/lib/alsa/asound.state'
         state.parent.mkdir(parents=True)

@@ -25,6 +25,7 @@ function verifiedButton(parent, label, action) {
   check.addEventListener("change", () => { button.disabled = !check.checked || networkBusy; });
 }
 function renderNetwork(state) {
+  if (state.message) networkMessage.textContent = state.message;
   networkState = state;
   const signature = JSON.stringify(state);
   if (signature === networkSignature) return;
