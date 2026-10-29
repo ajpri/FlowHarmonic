@@ -302,3 +302,7 @@ See [verification](docs/verification.md) for coverage and known gaps, and the
 [maintainer handoff](docs/maintainer-handoff.md) for reproducing development and
 testing on a fresh computer. Historical milestone reports record their original
 test versions; they are not the current product version.
+
+## License
+
+FlowHarmonic is licensed under the GNU General Public License v3.0. See [LICENSE](LICENSE).
